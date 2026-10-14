@@ -13,6 +13,8 @@
    create extension if not exists vector;
 ```
 
+Or add extention manually through supabase UI
+
 3. Grab your connection string from Project Settings → Database → Connection string.
    **Use the "Session pooler" option for IPv4**
 
@@ -42,7 +44,7 @@ Runs at `http://localhost:5173`.
 See `backend/.env.example`:
 
 - `DATABASE_URL` — Supabase Postgres connection string
-- `RADEON_API_KEY` — AMD Token Factory API key (shared team key)
+- `RADEON_API_KEY` — AMD Token Factory API key
 
 ## Hackathon
 
