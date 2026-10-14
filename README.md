@@ -23,7 +23,7 @@ Or add extention manually through supabase UI
 ```powershell
 cd backend
 uv sync
-cp .env.example .env    # then fill in DATABASE_URL and RADEON_API_KEY
+cp .env.example .env
 uv run uvicorn backend.main:app --reload
 ```
 
