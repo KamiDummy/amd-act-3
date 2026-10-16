@@ -21,7 +21,7 @@
 - [ ] Set up react-pdf-highlighter in frontend
 - [x] Embedding model in backend (sentence-transformers)
 - [x] Load federal statutes and regulations into pgvector
-- [ ] Endpoint: selected text → vector search → LLM explains, with citation
+- [x] Endpoint: selected text → vector search → LLM explains, with citation
 
 ### Document Q&A
 

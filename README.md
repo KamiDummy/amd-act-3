@@ -83,6 +83,12 @@ Set `TOKEN_FACTORY_API_KEY` in `backend/.env` (see `.env.example`). Without it t
 
 Only federal law is searched, so leases and most employment terms come back with few or no citations and a note to check provincial law.
 
+### Highlight-to-law (LLM)
+
+`POST /api/documents/{id}/explain` with `{"text": "<selected text>", "page_number": 2}` explains a passage the user selected and cites federal law for it. `page_number` is the page the selection starts on; it picks the right match when the text repeats. The selection may span pages and can be up to 4,000 characters.
+
+The response has `explanation`, `severity` (`high`, `medium`, `low` or `none`), `citations` (same shape as the loophole scan's) and the selection's `highlight`. It makes two Token Factory calls (one to write a search query, one to explain) and takes about 10 seconds. The ref and citation checks are shared with the loophole scan in `law_citations.py`.
+
 ### Highlights on the PDF
 
 Every feature that points at a passage in the document returns it as `highlight`, a list of rectangles, one per line of text:
