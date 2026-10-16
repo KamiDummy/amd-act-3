@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { login } from '../api/auth'
+import { APP_NAME } from '../config'
 import './LoginPage.css'
 
 function LoginPage({ onLogin }) {
@@ -29,7 +30,7 @@ function LoginPage({ onLogin }) {
   return (
     <main className="login">
       <form className="login-card" onSubmit={handleSubmit} noValidate>
-        <h1>Contract Review</h1>
+        <h1>{APP_NAME}</h1>
         <p className="login-subtitle">
           AI review of contracts, grounded in Canadian law.
         </p>

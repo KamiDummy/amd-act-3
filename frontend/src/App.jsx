@@ -11,6 +11,7 @@ import {
 } from './api/auth'
 import { setUnauthorizedHandler } from './api/client'
 import { listDocuments, uploadDocument } from './api/documents'
+import { APP_NAME } from './config'
 import './App.css'
 
 function App() {
@@ -165,7 +166,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Contract Review</h1>
+        <h1>{APP_NAME}</h1>
         {authRequired && (
           <button type="button" className="secondary" onClick={handleLogout}>
             Sign out
