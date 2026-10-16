@@ -118,3 +118,19 @@ def test_protected_route_rejects_bad_token(gate_on, token):
 
 def test_protected_route_is_open_when_gate_off(gate_off):
     assert client.get("/protected").status_code == 200
+
+
+def test_verify_accepts_valid_token(gate_on):
+    token = login(ACCESS_CODE).json()["access_token"]
+
+    assert client.get("/auth/verify", headers=auth_header(token)).status_code == 204
+
+
+def test_verify_rejects_invalid_token(gate_on):
+    response = client.get("/auth/verify", headers=auth_header("not-a-jwt"))
+
+    assert response.status_code == 401
+
+
+def test_verify_is_open_when_gate_off(gate_off):
+    assert client.get("/auth/verify").status_code == 204

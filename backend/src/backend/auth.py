@@ -70,6 +70,15 @@ def auth_status() -> AuthStatus:
     return AuthStatus(auth_required=settings.auth_enabled)
 
 
+@router.get(
+    "/verify",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_auth)],
+)
+def verify() -> None:
+    """Lets the client check that a stored token is still valid, e.g. after a backend restart."""
+
+
 @router.post("/login")
 def login(body: LoginRequest) -> TokenResponse:
     # With the gate off, any code gets a token so the frontend flow stays the same.
