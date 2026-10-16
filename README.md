@@ -1,3 +1,21 @@
+# [Project Name]
+
+AI-powered document analyzer built for the AMD Developer Hackathon Act III. Upload a contract or document and:
+
+- **Scan mode** — AI reviews the full document for unusual, risky, or scam-like clauses before you sign.
+- **Highlight-to-law search** — select any sentence and find real statutes/regulations that may be relevant to it.
+- **Ask a question** — chat directly with the document's content.
+
+Not legal advice — informational only, intended to help you know what to look out for before signing.
+
+## Stack
+
+- **Backend:** FastAPI (Python), managed with [uv](https://github.com/astral-sh/uv)
+- **Database:** PostgreSQL + `pgvector`, hosted on [Supabase](https://supabase.com)
+- **Frontend:** React (Vite)
+- **LLM:** [AMD Token Factory](https://developer.amd.com.cn/radeon/api) — OpenAI-compatible API running on AMD GPUs
+- **Embeddings:** self-hosted (`sentence-transformers`), used for the law-search vector store
+
 ## Setup
 
 ### 1. Database (Supabase)
@@ -9,10 +27,8 @@
    create extension if not exists vector;
 ```
 
-Or add extention manually through supabase UI
-
-3. Grab your connection string from Project Settings → Database → Connection string.
-   **Use the "Session pooler" option for IPv4**
+Or add the extension manually through the Supabase UI. 3. Grab your connection string from Project Settings → Database → Connection string.
+**Use the "Session pooler" option for IPv4.**
 
 ### 2. Backend
 
@@ -20,12 +36,14 @@ Or add extention manually through supabase UI
 cd backend
 uv sync
 cp .env.example .env
+uv run alembic upgrade head      # create/update the database tables
+uv run python -m backend.seed    # load the demo PDFs (safe to re-run)
 uv run uvicorn backend.main:app --reload
 ```
 
-Runs at `http://localhost:8000`. Check `/health` to confirm it's up.
+Runs at `http://localhost:8000`. Check `/health` to confirm it's up. API docs are at `/docs`.
 
-Run the tests with `uv run pytest`.
+After pulling changes that touch `backend/src/backend/models.py`, run `uv run alembic upgrade head` again. Run the tests with `uv run pytest`. See `CONTRIBUTING.md` for how to add new endpoints or generate migrations.
 
 ### 3. Frontend
 
@@ -48,42 +66,39 @@ See `backend/.env.example`:
   `python -c "import secrets; print(secrets.token_urlsafe(32))"`
 - `ACCESS_TOKEN_EXPIRE_MINUTES` — how long a login lasts (default `720`, 12 hours)
 - `CORS_ORIGINS` — origins allowed to call the API, as a JSON list (default `["http://localhost:5173"]`)
+- `STORAGE_DIR` — where uploaded PDFs are saved (default `storage`, relative to `backend/`; git-ignored)
 
 ## Access code
 
 The app is behind a single shared access code, not user accounts.
 
-| Endpoint | Auth | Purpose |
-| --- | --- | --- |
-| `GET /auth/status` | public | `{"auth_required": bool}`, so the client can skip the login page when no code is set |
-| `POST /auth/login` | public | `{"access_code": "..."}` → `{"access_token", "token_type": "bearer", "expires_in"}`, or `401` for a wrong code |
-| `GET /auth/verify` | token | `204` if the token is still valid, `401` if not (expired, or the backend restarted without a fixed `JWT_SECRET`) |
-| `/api/*` | token | All feature endpoints |
+| Endpoint           | Auth   | Purpose                                                                                                          |
+| ------------------ | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| `GET /auth/status` | public | `{"auth_required": bool}`, so the client can skip the login page when no code is set                             |
+| `POST /auth/login` | public | `{"access_code": "..."}` → `{"access_token", "token_type": "bearer", "expires_in"}`, or `401` for a wrong code   |
+| `GET /auth/verify` | token  | `204` if the token is still valid, `401` if not (expired, or the backend restarted without a fixed `JWT_SECRET`) |
+| `/api/*`           | token  | All feature endpoints                                                                                            |
 
 Clients send the token as `Authorization: Bearer <token>`. When `ACCESS_CODE` is empty, every request is let through.
 
-### Adding a protected endpoint
+## Documents
 
-Feature routers go under the `/api` router in `backend/api.py`, which applies `require_auth` to everything it includes:
+Everyone shares one demo workspace, so every user sees every document. Uploaded PDFs are saved to `STORAGE_DIR`; their text is extracted with pdfplumber and stored per page in Postgres (`documents` and `document_pages` tables), ready to send to the LLM.
 
-```python
-# backend/documents.py
-from fastapi import APIRouter
+All routes need the access token.
 
-router = APIRouter(prefix="/documents", tags=["documents"])
+| Endpoint                       | Purpose                                                                       |
+| ------------------------------ | ----------------------------------------------------------------------------- |
+| `GET /api/documents`           | List all documents, newest first (no text)                                    |
+| `POST /api/documents`          | Upload a PDF as multipart form field `file` → `201` with the document summary |
+| `GET /api/documents/{id}`      | One document with `pages: [{page_number, text}]`                              |
+| `GET /api/documents/{id}/file` | The original PDF, for the viewer                                              |
 
-@router.get("")
-def list_documents(): ...
-```
+Uploads are rejected with `422` (and a message to show the user) if the file isn't a readable PDF, has more than 100 pages or 300,000 characters, or has no selectable text (scanned). Files over 20 MB get `413`.
 
-```python
-# backend/api.py
-from backend import documents
+### Demo documents
 
-router.include_router(documents.router)  # served at /api/documents
-```
-
-`/health` and `/auth/*` stay public.
+`backend/sample_documents/` holds two fictional Ontario contracts with deliberate problems for the loophole check: clauses that conflict with Ontario law and internal contradictions (for example, the rent or salary differs between sections). `uv run python -m backend.seed` loads any of them not yet in the database, marked `is_sample: true`.
 
 ## Hackathon
 

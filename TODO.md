@@ -11,8 +11,8 @@
 
 ### Scan mode (whole doc → LLM analysis)
 
-- [ ] PDF upload endpoint
-- [ ] Text extraction (pdfplumber)
+- [x] PDF upload endpoint
+- [x] Text extraction (pdfplumber)
 - [ ] Call Token Factory API, get flagged issues back
 - [ ] Display results in frontend
 
