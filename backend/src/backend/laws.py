@@ -44,6 +44,7 @@ class ParsedAct:
 
 @dataclass
 class LawHit:
+    section_id: int
     law_id: str
     law_title: str
     kind: str
@@ -209,6 +210,7 @@ def search_laws(db: Session, query: str, limit: int = 5) -> list[LawHit]:
     )
     return [
         LawHit(
+            section_id=sec.id,
             law_id=law.id,
             law_title=law.title,
             kind=law.kind,

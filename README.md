@@ -69,6 +69,20 @@ uv run python -m backend.search_laws "can my landlord enter without notice"
 
 The first search downloads the embedding model (about 130 MB). Use the same model for queries and ingestion; changing it means re-running the ingest with `--force`.
 
+### Loophole scan (LLM)
+
+`POST /api/documents/{id}/loopholes` scans a stored document and returns findings, most severe first. Each finding has a title, a severity (`high`, `medium` or `low`), the clause quoted from the document, the page it was found on (`null` if the model paraphrased), a plain-language explanation and recommendation, and citations to federal law sections, each with its text and a link. The frontend sends only the document id; the backend reads the stored text.
+
+A scan makes two calls to AMD Token Factory (`Gemma-4-31B-IT`), with a vector search in between, and takes about a minute:
+
+1. The model lists up to 8 suspect clauses, each with a search query for its legal topic.
+2. Each query runs against the law database (top 4 sections).
+3. The model reviews each clause against its sections and may cite only those, so a citation can't point at law that isn't in the database.
+
+Set `TOKEN_FACTORY_API_KEY` in `backend/.env` (see `.env.example`). Without it the endpoint returns 503. LLM failures return 502. The team shares one key and its limit of about 20 requests a minute, so avoid running many scans at once.
+
+Only federal law is searched, so leases and most employment terms come back with few or no citations and a note to check provincial law.
+
 ### 3. Frontend
 
 ```powershell

@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # Where uploaded PDFs are saved, relative to the directory the backend runs from.
     storage_dir: Path = Path("storage")
 
+    # AMD Token Factory, an OpenAI-compatible LLM API. Unset key disables LLM features.
+    token_factory_api_key: SecretStr | None = None
+    token_factory_base_url: str = "https://developer.amd.com.cn/radeon/api/v1"
+    token_factory_model: str = "Gemma-4-31B-IT"
+
     @field_validator("jwt_secret", mode="before")
     @classmethod
     def generate_secret_if_empty(cls, value: object) -> object:
@@ -32,6 +37,12 @@ class Settings(BaseSettings):
     @property
     def auth_enabled(self) -> bool:
         return bool(self.access_code and self.access_code.get_secret_value())
+
+    @property
+    def llm_enabled(self) -> bool:
+        return bool(
+            self.token_factory_api_key and self.token_factory_api_key.get_secret_value()
+        )
 
 
 settings = Settings()  # type: ignore Loaded from .env
