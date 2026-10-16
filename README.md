@@ -20,10 +20,14 @@ Or add extention manually through supabase UI
 cd backend
 uv sync
 cp .env.example .env
+uv run alembic upgrade head      # create/update the database tables
+uv run python -m backend.seed    # load the demo PDFs (safe to re-run)
 uv run uvicorn backend.main:app --reload
 ```
 
-Runs at `http://localhost:8000`. Check `/health` to confirm it's up.
+Runs at `http://localhost:8000`. Check `/health` to confirm it's up. API docs are at `/docs`.
+
+After pulling changes that touch `backend/src/backend/models.py`, run `uv run alembic upgrade head` again. When you change the models yourself, generate a migration with `uv run alembic revision --autogenerate -m "describe the change"` and review it before committing.
 
 Run the tests with `uv run pytest`.
 
@@ -48,6 +52,7 @@ See `backend/.env.example`:
   `python -c "import secrets; print(secrets.token_urlsafe(32))"`
 - `ACCESS_TOKEN_EXPIRE_MINUTES` — how long a login lasts (default `720`, 12 hours)
 - `CORS_ORIGINS` — origins allowed to call the API, as a JSON list (default `["http://localhost:5173"]`)
+- `STORAGE_DIR` — where uploaded PDFs are saved (default `storage`, relative to `backend/`; git-ignored)
 
 ## Access code
 
@@ -84,6 +89,25 @@ router.include_router(documents.router)  # served at /api/documents
 ```
 
 `/health` and `/auth/*` stay public.
+
+## Documents
+
+Everyone shares one demo workspace, so every user sees every document. Uploaded PDFs are saved to `STORAGE_DIR`; their text is extracted with pdfplumber and stored per page in Postgres (`documents` and `document_pages` tables), ready to send to the LLM.
+
+All routes need the access token.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/documents` | List all documents, newest first (no text) |
+| `POST /api/documents` | Upload a PDF as multipart form field `file` → `201` with the document summary |
+| `GET /api/documents/{id}` | One document with `pages: [{page_number, text}]` |
+| `GET /api/documents/{id}/file` | The original PDF, for the viewer |
+
+Uploads are rejected with `422` (and a message to show the user) if the file isn't a readable PDF, has more than 100 pages or 300,000 characters, or has no selectable text (scanned). Files over 20 MB get `413`.
+
+### Demo documents
+
+`backend/sample_documents/` holds two fictional Ontario contracts with deliberate problems for the loophole check: clauses that conflict with Ontario law and internal contradictions (for example, the rent or salary differs between sections). `uv run python -m backend.seed` loads any of them not yet in the database, marked `is_sample: true`.
 
 ## Hackathon
 
