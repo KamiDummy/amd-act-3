@@ -83,6 +83,18 @@ Set `TOKEN_FACTORY_API_KEY` in `backend/.env` (see `.env.example`). Without it t
 
 Only federal law is searched, so leases and most employment terms come back with few or no citations and a note to check provincial law.
 
+### Highlights on the PDF
+
+Every feature that points at a passage in the document returns it as `highlight`, a list of rectangles, one per line of text:
+
+```json
+{"page_number": 2, "x0": 0.1176, "top": 0.1012, "x1": 0.8824, "bottom": 0.1195}
+```
+
+Coordinates are fractions of the page's width and height from its top-left corner, so they work at any zoom: draw each one as a box at `left: x0 * 100%`, `top: top * 100%`, `width: (x1 - x0) * 100%`, `height: (bottom - top) * 100%` over its page. A passage can cover several pages; each rectangle names its own. An empty list means the passage couldn't be matched to the PDF.
+
+`backend/src/backend/highlights.py` does the matching (`locate`), word by word against the stored page text, ignoring case, whitespace and curly quotes, and allowing partial words at the edges and quotes shortened with an ellipsis.
+
 ### 3. Frontend
 
 ```powershell
