@@ -13,6 +13,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost:5432/tes
 from backend import models  # noqa: E402, F401  Registers the tables on Base.metadata.
 from backend.config import settings  # noqa: E402
 from backend.database import Base, get_db  # noqa: E402
+from backend.laws import LawHit  # noqa: E402
 from backend.main import app  # noqa: E402
 
 SAMPLES_DIR = Path(__file__).resolve().parents[1] / "sample_documents"
@@ -71,3 +72,34 @@ def make_pdf(page_count: int = 1) -> bytes:
         xref_at,
     )
     return bytes(out)
+
+
+class FakeLlm:
+    """Replays scripted JSON replies in order and records the prompts it was sent."""
+
+    model = "fake-model"
+
+    def __init__(self, *replies):
+        self.replies = list(replies)
+        self.prompts: list[tuple[str, str]] = []
+
+    def complete_json(self, system: str, user: str, *, max_tokens: int):
+        self.prompts.append((system, user))
+        reply = self.replies.pop(0)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+
+def law_hit(section_id: int, label: str = "174") -> LawHit:
+    return LawHit(
+        section_id=section_id,
+        law_id="L-2",
+        law_title="Canada Labour Code",
+        kind="act",
+        label=label,
+        marginal_note="Overtime",
+        text=f"Section {label} text.",
+        url="https://laws-lois.justice.gc.ca/eng/acts/L-2/index.html",
+        score=0.8,
+    )

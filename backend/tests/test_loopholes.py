@@ -5,40 +5,9 @@ from pydantic import SecretStr
 
 from backend import loopholes
 from backend.config import settings
-from backend.laws import LawHit
 from backend.llm import LlmError, get_llm
 from backend.main import app
-
-
-class FakeLlm:
-    """Replays scripted JSON replies in order and records the prompts it was sent."""
-
-    model = "fake-model"
-
-    def __init__(self, *replies):
-        self.replies = list(replies)
-        self.prompts: list[tuple[str, str]] = []
-
-    def complete_json(self, system: str, user: str, *, max_tokens: int):
-        self.prompts.append((system, user))
-        reply = self.replies.pop(0)
-        if isinstance(reply, Exception):
-            raise reply
-        return reply
-
-
-def law_hit(section_id: int, label: str = "174") -> LawHit:
-    return LawHit(
-        section_id=section_id,
-        law_id="L-2",
-        law_title="Canada Labour Code",
-        kind="act",
-        label=label,
-        marginal_note="Overtime",
-        text=f"Section {label} text.",
-        url="https://laws-lois.justice.gc.ca/eng/acts/L-2/index.html",
-        score=0.8,
-    )
+from conftest import FakeLlm, law_hit
 
 
 @pytest.fixture

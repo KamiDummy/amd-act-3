@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 from backend.documents import get_document_or_404, pdf_path
 from backend.highlights import HighlightRect, locate
+from backend.law_citations import Citation, LawRefs
 from backend.laws import LawHit, search_laws
 from backend.llm import LlmClient, LlmError, get_llm
 from backend.models import Document
@@ -117,16 +118,6 @@ class ReviewedIssues(BaseModel):
 # API response.
 
 
-class Citation(BaseModel):
-    law_id: str
-    law_title: str
-    kind: str
-    section: str
-    marginal_note: str | None
-    text: str
-    url: str
-
-
 class Finding(BaseModel):
     title: str
     severity: Severity
@@ -173,7 +164,7 @@ def review_issues(
     llm: LlmClient,
     issues: list[FoundIssue],
     candidates: list[list[LawHit]],
-    refs: dict[int, str],
+    refs: LawRefs,
 ) -> list[ReviewedIssue]:
     payload = [
         {
@@ -181,16 +172,7 @@ def review_issues(
             "title": issue.title,
             "clause": issue.quote,
             "concern": issue.concern,
-            "candidate_law": [
-                {
-                    "ref": refs[hit.section_id],
-                    "law": hit.law_title,
-                    "section": hit.label,
-                    "note": hit.marginal_note,
-                    "text": hit.text,
-                }
-                for hit in hits
-            ],
+            "candidate_law": refs.prompt_entries(hits),
         }
         for index, (issue, hits) in enumerate(zip(issues, candidates))
     ]
@@ -205,18 +187,6 @@ def review_issues(
         raise LlmError("The language model returned findings in the wrong format.") from exc
 
 
-def _citation(hit: LawHit) -> Citation:
-    return Citation(
-        law_id=hit.law_id,
-        law_title=hit.law_title,
-        kind=hit.kind,
-        section=hit.label,
-        marginal_note=hit.marginal_note,
-        text=hit.text,
-        url=hit.url,
-    )
-
-
 def scan_document(db: Session, llm: LlmClient, document: Document) -> list[Finding]:
     """Runs the full scan. Raises LlmError when the model fails or misbehaves."""
     issues = find_issues(llm, document)
@@ -224,11 +194,7 @@ def scan_document(db: Session, llm: LlmClient, document: Document) -> list[Findi
         return []
 
     candidates = [search_laws(db, issue.law_query, LAWS_PER_ISSUE) for issue in issues]
-    # Short refs for the prompt, shared when two clauses retrieve the same section.
-    refs: dict[int, str] = {}
-    for hits in candidates:
-        for hit in hits:
-            refs.setdefault(hit.section_id, f"L{len(refs) + 1}")
+    refs = LawRefs(candidates)
 
     highlights = locate(document, pdf_path(document.id), [i.quote for i in issues])
 
@@ -240,9 +206,6 @@ def scan_document(db: Session, llm: LlmClient, document: Document) -> list[Findi
         seen.add(reviewed.issue)
         issue = issues[reviewed.issue]
         highlight = highlights[reviewed.issue]
-        # Drop refs the model invented or took from another clause's candidates.
-        allowed = {refs[hit.section_id]: hit for hit in candidates[reviewed.issue]}
-        cited = dict.fromkeys(ref for ref in reviewed.citations if ref in allowed)
         findings.append(
             Finding(
                 title=issue.title,
@@ -252,7 +215,7 @@ def scan_document(db: Session, llm: LlmClient, document: Document) -> list[Findi
                 highlight=highlight,
                 explanation=reviewed.explanation,
                 recommendation=reviewed.recommendation,
-                citations=[_citation(allowed[ref]) for ref in cited],
+                citations=refs.cite(reviewed.citations, candidates[reviewed.issue]),
             )
         )
     findings.sort(key=lambda finding: SEVERITY_ORDER[finding.severity])
