@@ -54,6 +54,16 @@ function FileUpload({ onUpload }) {
     event.target.value = ''
   }
 
+  function openPicker() {
+    if (!checking) inputRef.current.click()
+  }
+
+  // Clicking anywhere on the card opens the file picker, like the design.
+  // The button inside handles its own clicks, so ignore those here.
+  function handleZoneClick(event) {
+    if (!event.target.closest('button')) openPicker()
+  }
+
   const zoneClass = ['upload-zone', dragging && 'is-dragging', error && 'has-error']
     .filter(Boolean)
     .join(' ')
@@ -61,25 +71,26 @@ function FileUpload({ onUpload }) {
   return (
     <section
       className={zoneClass}
+      onClick={handleZoneClick}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       aria-busy={checking}
     >
-      <p className="upload-title">
-        {checking ? 'Checking your PDF…' : 'Drag a contract PDF here'}
-      </p>
-      <p className="upload-hint">
-        PDF only · up to {MAX_PAGES} pages · max {MAX_SIZE_MB} MB · text-based (not scanned)
-      </p>
-
-      <button
-        type="button"
-        onClick={() => inputRef.current.click()}
-        disabled={checking}
-      >
-        Choose PDF
+      <button type="button" className="upload-button" onClick={openPicker} disabled={checking}>
+        <span className="upload-plus" aria-hidden="true">
+          {checking ? <span className="upload-spinner" /> : '+'}
+        </span>
+        <span className="upload-title">
+          {checking ? 'Checking your PDF…' : 'Upload a contract PDF'}
+        </span>
+        <span className="upload-hint">
+          {dragging ? 'Drop it here' : 'Drag and drop, or click to browse'}
+        </span>
       </button>
+      <p className="upload-limits">
+        Text-based PDF · up to {MAX_PAGES} pages · {MAX_SIZE_MB} MB max
+      </p>
       <input
         ref={inputRef}
         type="file"
