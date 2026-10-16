@@ -371,3 +371,6 @@ vite.config.ts.timestamp-*
 
 .env
 .env.local
+
+# Uploaded PDFs (backend/storage by default)
+backend/storage/
