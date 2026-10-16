@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { login } from '../api/auth'
+import Logo from './Logo'
 import './LoginPage.css'
 
 function LoginPage({ onLogin }) {
@@ -28,10 +29,11 @@ function LoginPage({ onLogin }) {
 
   return (
     <main className="login">
+      <Logo as="h1" />
       <form className="login-card" onSubmit={handleSubmit} noValidate>
-        <h1>Contract Review</h1>
+        <h2 className="login-title">Not sure what you’re signing?</h2>
         <p className="login-subtitle">
-          AI review of contracts, grounded in Canadian law.
+          Enter your access code to review contracts against Canadian law.
         </p>
 
         <label htmlFor="access-code">Access code</label>
@@ -56,11 +58,10 @@ function LoginPage({ onLogin }) {
         <button type="submit" disabled={loading}>
           {loading ? 'Checking…' : 'Sign in'}
         </button>
-
-        <p className="login-disclaimer">
-          This tool does not provide legal advice.
-        </p>
       </form>
+      <p className="login-disclaimer">
+        Information, not legal advice. For decisions that matter, talk to a lawyer.
+      </p>
     </main>
   )
 }
