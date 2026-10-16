@@ -137,17 +137,6 @@ function App() {
     setSelectedId(newDocument.id) // Open what was just uploaded.
   }
 
-  function handleRemove(id) {
-    const index = documents.findIndex((doc) => doc.id === id)
-    const remaining = documents.filter((doc) => doc.id !== id)
-    setDocuments(remaining)
-    if (id === selectedId) {
-      // Open the neighbour that slid into this spot, or the new last one.
-      const next = remaining[index] ?? remaining.at(-1)
-      setSelectedId(next ? next.id : null)
-    }
-  }
-
   if (authStatus === 'checking') {
     return (
       <main className="app-status" aria-busy="true">
@@ -193,7 +182,8 @@ function App() {
             onRetry={handleRetryDocuments}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            onRemove={handleRemove}
+            // No onRemove: there's no delete endpoint yet, and in the shared workspace
+            // removing a document would remove it for everyone. The × stays hidden.
             onNew={() => setSelectedId(null)}
           />
         </aside>

@@ -56,15 +56,18 @@ function DocumentSelector({
                   {formatSize(doc.size)}
                 </span>
               </button>
-              <button
-                type="button"
-                className="doc-item-remove"
-                onClick={() => onRemove(doc.id)}
-                aria-label={`Remove ${doc.name}`}
-                title="Remove"
-              >
-                ×
-              </button>
+              {/* Only shown when the parent passes onRemove. */}
+              {onRemove && (
+                <button
+                  type="button"
+                  className="doc-item-remove"
+                  onClick={() => onRemove(doc.id)}
+                  aria-label={`Remove ${doc.name}`}
+                  title="Remove"
+                >
+                  ×
+                </button>
+              )}
             </li>
           )
         })}
