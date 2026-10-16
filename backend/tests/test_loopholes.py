@@ -119,10 +119,12 @@ def test_scan_returns_findings_with_citations_and_pages(client, document, search
     assert first["title"] == "Vague duties"
     assert first["severity"] == "high"
     assert first["page_number"] == 2
+    assert first["highlight"] and {r["page_number"] for r in first["highlight"]} == {2}
     assert [c["section"] for c in first["citations"]] == ["230", "174"]
     assert first["citations"][0]["url"].startswith("https://laws-lois.justice.gc.ca/")
     assert second["severity"] == "low"
     assert second["page_number"] is None
+    assert second["highlight"] == []
     assert second["citations"] == []
     assert searches == ["overtime pay", "overtime pay"]
     # The stored text reaches the model, wrapped as data.
@@ -201,11 +203,3 @@ def test_scan_requires_token_when_gate_on(client, monkeypatch):
     monkeypatch.setattr(settings, "access_code", SecretStr("secret"))
 
     assert scan(client, uuid.uuid4()).status_code == 401
-
-
-def test_find_page_ignores_case_and_whitespace():
-    page = type("Page", (), {"page_number": 3, "text": "The Employee\nshall   WORK"})
-    document = type("Doc", (), {"pages": [page]})
-
-    assert loopholes.find_page(document, "employee shall work") == 3  # type: ignore[arg-type]
-    assert loopholes.find_page(document, "   ") is None  # type: ignore[arg-type]

@@ -18,7 +18,8 @@ from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.documents import get_document_or_404
+from backend.documents import get_document_or_404, pdf_path
+from backend.highlights import HighlightRect, locate
 from backend.laws import LawHit, search_laws
 from backend.llm import LlmClient, LlmError, get_llm
 from backend.models import Document
@@ -129,10 +130,13 @@ class Citation(BaseModel):
 class Finding(BaseModel):
     title: str
     severity: Severity
-    # The clause as the model quoted it; the frontend can search the page for it.
+    # The clause as the model quoted it.
     quote: str
-    # Where the quote was found, or None when the model paraphrased instead of quoting.
+    # The first page of the clause, to scroll to. None when the model paraphrased
+    # instead of quoting, so the clause couldn't be found.
     page_number: int | None
+    # Where to draw the clause on the PDF; may cover several pages. Empty when not found.
+    highlight: list[HighlightRect]
     explanation: str
     recommendation: str
     citations: list[Citation]
@@ -142,19 +146,6 @@ class LoopholeReport(BaseModel):
     document_id: uuid.UUID
     model: str
     findings: list[Finding]
-
-
-def _normalize(text: str) -> str:
-    return " ".join(text.split()).casefold()
-
-
-def find_page(document: Document, quote: str) -> int | None:
-    """The first page containing `quote`, ignoring whitespace and case."""
-    needle = _normalize(quote)
-    for page in document.pages:
-        if needle and needle in _normalize(page.text):
-            return page.page_number
-    return None
 
 
 def document_text(document: Document) -> str:
@@ -239,6 +230,8 @@ def scan_document(db: Session, llm: LlmClient, document: Document) -> list[Findi
         for hit in hits:
             refs.setdefault(hit.section_id, f"L{len(refs) + 1}")
 
+    highlights = locate(document, pdf_path(document.id), [i.quote for i in issues])
+
     findings: list[Finding] = []
     seen: set[int] = set()
     for reviewed in review_issues(llm, issues, candidates, refs):
@@ -246,6 +239,7 @@ def scan_document(db: Session, llm: LlmClient, document: Document) -> list[Findi
             continue
         seen.add(reviewed.issue)
         issue = issues[reviewed.issue]
+        highlight = highlights[reviewed.issue]
         # Drop refs the model invented or took from another clause's candidates.
         allowed = {refs[hit.section_id]: hit for hit in candidates[reviewed.issue]}
         cited = dict.fromkeys(ref for ref in reviewed.citations if ref in allowed)
@@ -254,7 +248,8 @@ def scan_document(db: Session, llm: LlmClient, document: Document) -> list[Findi
                 title=issue.title,
                 severity=reviewed.severity,
                 quote=issue.quote,
-                page_number=find_page(document, issue.quote),
+                page_number=highlight[0].page_number if highlight else None,
+                highlight=highlight,
                 explanation=reviewed.explanation,
                 recommendation=reviewed.recommendation,
                 citations=[_citation(allowed[ref]) for ref in cited],
