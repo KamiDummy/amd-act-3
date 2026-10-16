@@ -5,10 +5,13 @@ selection and the sources behind a Q&A answer. A match can span several pages.
 
 Matching is word by word and ignores case, whitespace and curly quotes. The first and
 last words may be partial, because selections and truncated quotes can cut a word.
+A quote shortened with an ellipsis matches when its parts appear in order, close
+together, and the whole passage from the first part to the last is highlighted.
 The stored page text and pdfplumber's word boxes come from the same extraction, so the
 n-th word of a page's text is its n-th box. The PDF is only opened for pages with a match.
 """
 
+import re
 from pathlib import Path
 
 import pdfplumber
@@ -19,6 +22,9 @@ from backend.models import Document
 CURLY_QUOTES = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"'})
 # Words whose tops are this close, in points, are on the same line.
 LINE_TOLERANCE = 2.0
+ELLIPSIS = re.compile(r"\.\.\.|…")
+# How many words an ellipsis may stand for.
+MAX_ELLIPSIS_GAP = 100
 
 
 class HighlightRect(BaseModel):
@@ -49,6 +55,31 @@ def find_starts(haystack: list[str], needle: list[str]) -> list[int]:
         and haystack[i + size - 1].startswith(needle[-1])
         and haystack[i + 1 : i + size - 1] == needle[1:-1]
     ]
+
+
+def find_span(
+    words: list[str], quote: str, pages: list[int], near_page: int | None
+) -> range | None:
+    """The word indexes `quote` covers in `words`, or None. `pages[i]` is the page of
+    word i; with several matches, the one starting closest to `near_page` wins."""
+    parts = [part for part in map(tokens, ELLIPSIS.split(quote)) if part]
+    if not parts:
+        return None
+    matches: list[range] = []
+    for start in find_starts(words, parts[0]):
+        end = start + len(parts[0])
+        for part in parts[1:]:
+            following = find_starts(words[end : end + MAX_ELLIPSIS_GAP + len(part)], part)
+            if not following:
+                break
+            end += following[0] + len(part)
+        else:
+            matches.append(range(start, end))
+    if not matches:
+        return None
+    if near_page is None:
+        return matches[0]
+    return min(matches, key=lambda match: abs(pages[match.start] - near_page))
 
 
 def _line_rects(
@@ -101,17 +132,11 @@ def locate(
         positions += [(page.page_number, i) for i in range(len(page_words))]
         word_counts[page.page_number] = len(page_words)
 
+    pages = [page_number for page_number, _ in positions]
     spans: list[list[tuple[int, int]]] = []
     for quote in quotes:
-        needle = tokens(quote)
-        starts = find_starts(words, needle) if needle else []
-        if not starts:
-            spans.append([])
-            continue
-        start = starts[0]
-        if near_page is not None:
-            start = min(starts, key=lambda s: abs(positions[s][0] - near_page))
-        spans.append(positions[start : start + len(needle)])
+        match = find_span(words, quote, pages, near_page)
+        spans.append(positions[match.start : match.stop] if match else [])
 
     pages_needed = {page_number for span in spans for page_number, _ in span}
     if not pages_needed or not pdf.is_file():

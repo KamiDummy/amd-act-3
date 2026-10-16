@@ -1,7 +1,7 @@
 import pytest
 
 from backend.documents import create_document, pdf_path
-from backend.highlights import find_starts, locate, tokens
+from backend.highlights import MAX_ELLIPSIS_GAP, find_starts, locate, tokens
 
 
 @pytest.fixture
@@ -111,3 +111,26 @@ def test_locate_keeps_quote_order(document):
     assert results[0][0].page_number == 2
     assert results[1] == []
     assert results[2][0].page_number == 1
+
+
+@pytest.mark.parametrize("ellipsis", ["...", "\u2026", " ... "])
+def test_quote_with_ellipsis_highlights_the_whole_passage(document, ellipsis):
+    words = words_of(document, 1)
+    full = find(document, " ".join(words[100:130]))
+    shortened = " ".join(words[100:108]) + ellipsis + " ".join(words[122:130])
+
+    assert find(document, shortened) == full
+
+
+def test_ellipsis_parts_too_far_apart_do_not_match(document):
+    words = words_of(document, 1) + words_of(document, 2)
+    far = 10 + MAX_ELLIPSIS_GAP + 5
+    shortened = " ".join(words[0:5]) + "..." + " ".join(words[far : far + 5])
+
+    assert find(document, shortened) == []
+
+
+def test_ellipsis_parts_out_of_order_do_not_match(document):
+    words = words_of(document, 1)
+
+    assert find(document, " ".join(words[120:126]) + "..." + " ".join(words[100:106])) == []
