@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, ForeignKey, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -39,3 +40,44 @@ class DocumentPage(Base):
     text: Mapped[str] = mapped_column(Text)
 
     document: Mapped[Document] = relationship(back_populates="pages")
+
+
+EMBEDDING_DIM = 384
+
+
+class Law(Base):
+    """A federal Act or regulation, from the Justice Laws consolidated XML."""
+
+    __tablename__ = "laws"
+
+    # The Justice Laws file name, e.g. "C-46" (Criminal Code) or "SOR-2000-111".
+    id: Mapped[str] = mapped_column(primary_key=True)
+    kind: Mapped[str]  # "act" or "regulation"
+    title: Mapped[str]
+    long_title: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str]
+
+    sections: Mapped[list[LawSection]] = relationship(
+        back_populates="law", cascade="all, delete-orphan"
+    )
+
+
+class LawSection(Base):
+    """One searchable piece of an Act: a section, or a slice of a long one."""
+
+    __tablename__ = "law_sections"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    law_id: Mapped[str] = mapped_column(
+        ForeignKey("laws.id", ondelete="CASCADE"), index=True
+    )
+    # Section label as printed, e.g. "2" or "83.01".
+    label: Mapped[str]
+    # Which slice of the section this is, when a long one is split.
+    part: Mapped[int] = mapped_column(default=0)
+    heading: Mapped[str | None]
+    marginal_note: Mapped[str | None]
+    text: Mapped[str] = mapped_column(Text)
+    embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
+
+    law: Mapped[Law] = relationship(back_populates="sections")

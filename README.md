@@ -45,6 +45,30 @@ Runs at `http://localhost:8000`. Check `/health` to confirm it's up. API docs ar
 
 After pulling changes that touch `backend/src/backend/models.py`, run `uv run alembic upgrade head` again. Run the tests with `uv run pytest`. See `CONTRIBUTING.md` for how to add new endpoints or generate migrations.
 
+### Law database (vector search)
+
+Federal Acts and regulations live in the `laws` and `law_sections` tables, one row per section (long sections are split), each with a 384-dimension embedding from `BAAI/bge-small-en-v1.5` and an HNSW cosine index. The source is Justice Canada's consolidated XML at [justicecanada/laws-lois-xml](https://github.com/justicecanada/laws-lois-xml), published under the Open Government Licence - Canada.
+
+The shared Supabase database is already loaded, so you only need `uv run alembic upgrade head`. It holds 895 federal Acts (the other 76 of the 971 files had no section text, mostly repealed Acts, and were skipped) and 1,963 regulations, about 95,500 sections and 410 MB in total. Regulations were loaded in file-name order and **stopped at `SOR-2023-123`**, so the newest regulations (`SOR-2023-123` onward) are missing. The rest wouldn't fit under Supabase's 500 MB free-tier limit.
+
+To load a fresh database (hours on CPU, downloads about 340 MB of XML into `backend/data/`, which is gitignored):
+
+```powershell
+uv run alembic upgrade head
+uv run python -m backend.ingest_laws                 # everything; safe to re-run, skips what's loaded
+uv run python -m backend.ingest_laws --only C-46     # or just some laws, by file name
+```
+
+Check the database size first (`select pg_size_pretty(pg_database_size(current_database()))`). Past 500 MB, Supabase's free tier makes the database read-only.
+
+Try a query from the terminal, or call `search_laws(db, text, limit)` in `backend/src/backend/laws.py` from the API:
+
+```powershell
+uv run python -m backend.search_laws "can my landlord enter without notice"
+```
+
+The first search downloads the embedding model (about 130 MB). Use the same model for queries and ingestion; changing it means re-running the ingest with `--force`.
+
 ### 3. Frontend
 
 ```powershell
