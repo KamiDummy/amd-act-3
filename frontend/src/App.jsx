@@ -10,6 +10,7 @@ import {
   verifyToken,
 } from './api/auth'
 import { setUnauthorizedHandler } from './api/client'
+import { listDocuments, uploadDocument } from './api/documents'
 import './App.css'
 
 function App() {
@@ -21,8 +22,12 @@ function App() {
   const [connectionError, setConnectionError] = useState('')
   // Bumped by the Retry button to run the page-load check again.
   const [checkAttempt, setCheckAttempt] = useState(0)
-  // Uploaded documents live in memory for now; a refresh clears them until the backend stores them.
+  // The shared workspace's documents, loaded from the backend once signed in.
   const [documents, setDocuments] = useState([])
+  const [documentsLoading, setDocumentsLoading] = useState(true)
+  const [documentsError, setDocumentsError] = useState('')
+  // Bumped by the list's Retry button to load the documents again.
+  const [documentsAttempt, setDocumentsAttempt] = useState(0)
   // null means "no document open", which shows the upload screen.
   const [selectedId, setSelectedId] = useState(null)
 
@@ -67,14 +72,47 @@ function App() {
     setUnauthorizedHandler(() => {
       setAuthStatus('login')
       setDocuments([])
+      setDocumentsLoading(true)
+      setDocumentsError('')
       setSelectedId(null)
     })
     return () => setUnauthorizedHandler(null)
   }, [])
 
+  // Once signed in, load the shared workspace. Runs again after Retry or a new sign-in.
+  useEffect(() => {
+    if (authStatus !== 'ready') return
+    let cancelled = false
+
+    async function loadDocuments() {
+      try {
+        const loaded = await listDocuments()
+        if (cancelled) return
+        setDocuments(loaded)
+        setDocumentsLoading(false)
+      } catch (err) {
+        // A 401 is handled by the unauthorized handler above, which shows the login page.
+        if (cancelled || err.status === 401) return
+        setDocumentsError(err.message)
+        setDocumentsLoading(false)
+      }
+    }
+
+    loadDocuments()
+    return () => {
+      cancelled = true
+    }
+  }, [authStatus, documentsAttempt])
+
   function handleRetry() {
     setAuthStatus('checking')
     setCheckAttempt((n) => n + 1)
+  }
+
+  function handleRetryDocuments() {
+    setDocumentsError('')
+    setDocumentsLoading(true)
+    setDocumentsAttempt((n) => n + 1)
   }
 
   function handleLogin(token) {
@@ -86,19 +124,16 @@ function App() {
     clearToken()
     setAuthStatus('login')
     setDocuments([])
+    setDocumentsLoading(true)
+    setDocumentsError('')
     setSelectedId(null)
   }
 
-  function handleUpload({ file, pageCount }) {
-    const newDocument = {
-      id: crypto.randomUUID(),
-      name: file.name,
-      size: file.size,
-      pageCount,
-      file,
-      uploadedAt: Date.now(),
-    }
-    setDocuments((current) => [...current, newDocument])
+  // Errors (bad PDF, too large, …) are thrown back to FileUpload, which shows them.
+  async function handleUpload(file) {
+    const newDocument = await uploadDocument(file)
+    // The list is newest first, so the new document goes on top.
+    setDocuments((current) => [newDocument, ...current])
     setSelectedId(newDocument.id) // Open what was just uploaded.
   }
 
@@ -153,6 +188,9 @@ function App() {
         <aside className="app-sidebar">
           <DocumentSelector
             documents={documents}
+            loading={documentsLoading}
+            error={documentsError}
+            onRetry={handleRetryDocuments}
             selectedId={selectedId}
             onSelect={setSelectedId}
             onRemove={handleRemove}

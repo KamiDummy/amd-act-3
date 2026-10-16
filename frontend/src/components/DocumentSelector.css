@@ -96,3 +96,37 @@
   opacity: 1;
   color: var(--danger);
 }
+
+.doc-selector-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--danger);
+}
+
+.doc-selector-error p {
+  margin: 0;
+}
+
+/* Name and badge on one line; the name shrinks with "…" so the badge stays visible. */
+.doc-item-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.doc-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
