@@ -5,7 +5,73 @@ function formatSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function DocumentSelector({ documents, selectedId, onSelect, onRemove, onNew }) {
+function DocumentSelector({
+  documents,
+  loading,
+  error,
+  onRetry,
+  selectedId,
+  onSelect,
+  onRemove,
+  onNew,
+}) {
+  let content
+  if (loading) {
+    content = (
+      <p className="doc-selector-empty" aria-busy="true">
+        Loading documents…
+      </p>
+    )
+  } else if (error) {
+    content = (
+      <div className="doc-selector-error" role="alert">
+        <p>{error}</p>
+        <button type="button" className="secondary small" onClick={onRetry}>
+          Retry
+        </button>
+      </div>
+    )
+  } else if (documents.length === 0) {
+    content = <p className="doc-selector-empty">No documents yet.</p>
+  } else {
+    content = (
+      <ul className="doc-list">
+        {documents.map((doc) => {
+          const selected = doc.id === selectedId
+          return (
+            <li key={doc.id} className={selected ? 'doc-item is-selected' : 'doc-item'}>
+              <button
+                type="button"
+                className="doc-item-main"
+                onClick={() => onSelect(doc.id)}
+                aria-current={selected ? 'true' : undefined}
+                title={doc.name}
+              >
+                <span className="doc-item-title">
+                  <span className="doc-item-name">{doc.name}</span>
+                  {doc.isSample && <span className="doc-badge">Demo</span>}
+                </span>
+                <span className="doc-item-meta">
+                  {doc.pageCount} {doc.pageCount === 1 ? 'page' : 'pages'} ·{' '}
+                  {formatSize(doc.size)}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="doc-item-remove"
+                onClick={() => onRemove(doc.id)}
+                aria-label={`Remove ${doc.name}`}
+                title="Remove"
+              >
+                ×
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    )
+  }
+
   return (
     <nav className="doc-selector" aria-label="Documents">
       <div className="doc-selector-header">
@@ -14,42 +80,7 @@ function DocumentSelector({ documents, selectedId, onSelect, onRemove, onNew }) 
           + New
         </button>
       </div>
-
-      {documents.length === 0 ? (
-        <p className="doc-selector-empty">No documents yet.</p>
-      ) : (
-        <ul className="doc-list">
-          {documents.map((doc) => {
-            const selected = doc.id === selectedId
-            return (
-              <li key={doc.id} className={selected ? 'doc-item is-selected' : 'doc-item'}>
-                <button
-                  type="button"
-                  className="doc-item-main"
-                  onClick={() => onSelect(doc.id)}
-                  aria-current={selected ? 'true' : undefined}
-                  title={doc.name}
-                >
-                  <span className="doc-item-name">{doc.name}</span>
-                  <span className="doc-item-meta">
-                    {doc.pageCount} {doc.pageCount === 1 ? 'page' : 'pages'} ·{' '}
-                    {formatSize(doc.size)}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="doc-item-remove"
-                  onClick={() => onRemove(doc.id)}
-                  aria-label={`Remove ${doc.name}`}
-                  title="Remove"
-                >
-                  ×
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+      {content}
     </nav>
   )
 }
