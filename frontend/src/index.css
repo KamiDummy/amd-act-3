@@ -1,21 +1,36 @@
+/* NotALawyer look: warm "paper" colours, a serif for documents and headings,
+   a clean sans for the interface. Components only use these variables. */
 :root {
-  --text: #4b5563;
-  --text-h: #111827;
-  --bg: #f9fafb;
-  --surface: #fff;
-  --border: #e5e7eb;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-soft: rgba(37, 99, 235, 0.08);
-  --on-accent: #fff;
-  --danger: #dc2626;
-  --shadow:
-    rgba(0, 0, 0, 0.08) 0 10px 15px -3px, rgba(0, 0, 0, 0.04) 0 4px 6px -2px;
+  --text: #4a4740;
+  --text-h: #1d1c1a;
+  --text-muted: #6b675f;
+  --bg: #f3f1ec;
+  --surface: #fffefb;
+  --bar: #fbfaf7;
+  --well: #e4e1d9;
+  --border: rgba(29, 28, 26, 0.12);
+  --accent: #1d1c1a;
+  --accent-hover: #3a3833;
+  --accent-soft: #ece9e2;
+  --on-accent: #f7f5f0;
+  --danger: #b3402a;
+  --shadow: 0 1px 2px rgba(40, 35, 25, 0.06), 0 8px 24px rgba(40, 35, 25, 0.08);
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Highlight colours for the review workspace: high risk, negotiate, mine, cited. */
+  --high: oklch(0.58 0.15 35);
+  --high-bg: oklch(0.91 0.07 35);
+  --med: oklch(0.66 0.11 60);
+  --med-bg: oklch(0.94 0.05 60);
+  --mine: oklch(0.62 0.13 85);
+  --mine-bg: oklch(0.92 0.09 95);
+  --cite: oklch(0.55 0.13 250);
+  --cite-bg: oklch(0.91 0.06 240);
 
-  font: 16px/1.5 var(--sans);
+  --sans: 'Instrument Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --serif: 'Newsreader', Georgia, serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  font: 15px/1.5 var(--sans);
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
@@ -23,20 +38,23 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Dark mode keeps the same warm feel: dark paper with light ink. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #111318;
-    --surface: #1a1d24;
-    --border: #2e313a;
-    --accent: #60a5fa;
-    --accent-hover: #93c5fd;
-    --accent-soft: rgba(96, 165, 250, 0.12);
-    --on-accent: #0b1220;
-    --danger: #f87171;
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+    --text: #c9c4b8;
+    --text-h: #f3f1ec;
+    --text-muted: #9a9488;
+    --bg: #161513;
+    --surface: #1f1e1b;
+    --bar: #1b1a18;
+    --well: #121110;
+    --border: rgba(243, 241, 236, 0.12);
+    --accent: #f3f1ec;
+    --accent-hover: #d9d5cb;
+    --accent-soft: rgba(243, 241, 236, 0.08);
+    --on-accent: #1d1c1a;
+    --danger: #f08c74;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
   }
 }
 
@@ -50,11 +68,13 @@ h2,
 h3 {
   color: var(--text-h);
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 button {
   font: inherit;
   font-weight: 600;
+  font-size: 14px;
   padding: 10px 16px;
   border: none;
   border-radius: 8px;
@@ -78,16 +98,17 @@ button:disabled {
 }
 
 button.secondary {
-  background: transparent;
+  background: var(--surface);
   color: var(--text-h);
   border: 1px solid var(--border);
+  font-weight: 500;
 }
 
 button.secondary:hover:not(:disabled) {
-  background: var(--border);
+  background: var(--accent-soft);
 }
 
 button.small {
   padding: 4px 10px;
-  font-size: 14px;
+  font-size: 13px;
 }

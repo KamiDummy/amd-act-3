@@ -47,24 +47,30 @@ function DocumentSelector({
                 aria-current={selected ? 'true' : undefined}
                 title={doc.name}
               >
-                <span className="doc-item-title">
-                  <span className="doc-item-name">{doc.name}</span>
-                  {doc.isSample && <span className="doc-badge">Demo</span>}
-                </span>
-                <span className="doc-item-meta">
-                  {doc.pageCount} {doc.pageCount === 1 ? 'page' : 'pages'} ·{' '}
-                  {formatSize(doc.size)}
+                <span className="doc-thumb" aria-hidden="true" />
+                <span className="doc-item-text">
+                  <span className="doc-item-title">
+                    <span className="doc-item-name">{doc.name}</span>
+                    {doc.isSample && <span className="doc-badge">Demo</span>}
+                  </span>
+                  <span className="doc-item-meta">
+                    {doc.pageCount} {doc.pageCount === 1 ? 'page' : 'pages'} ·{' '}
+                    {formatSize(doc.size)}
+                  </span>
                 </span>
               </button>
-              <button
-                type="button"
-                className="doc-item-remove"
-                onClick={() => onRemove(doc.id)}
-                aria-label={`Remove ${doc.name}`}
-                title="Remove"
-              >
-                ×
-              </button>
+              {/* Only shown when the parent passes onRemove. */}
+              {onRemove && (
+                <button
+                  type="button"
+                  className="doc-item-remove"
+                  onClick={() => onRemove(doc.id)}
+                  aria-label={`Remove ${doc.name}`}
+                  title="Remove"
+                >
+                  ×
+                </button>
+              )}
             </li>
           )
         })}

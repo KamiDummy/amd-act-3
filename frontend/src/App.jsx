@@ -11,6 +11,7 @@ import {
 } from './api/auth'
 import { setUnauthorizedHandler } from './api/client'
 import { listDocuments, uploadDocument } from './api/documents'
+import Logo from './components/Logo'
 import './App.css'
 
 function App() {
@@ -137,17 +138,6 @@ function App() {
     setSelectedId(newDocument.id) // Open what was just uploaded.
   }
 
-  function handleRemove(id) {
-    const index = documents.findIndex((doc) => doc.id === id)
-    const remaining = documents.filter((doc) => doc.id !== id)
-    setDocuments(remaining)
-    if (id === selectedId) {
-      // Open the neighbour that slid into this spot, or the new last one.
-      const next = remaining[index] ?? remaining.at(-1)
-      setSelectedId(next ? next.id : null)
-    }
-  }
-
   if (authStatus === 'checking') {
     return (
       <main className="app-status" aria-busy="true">
@@ -176,7 +166,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>Contract Review</h1>
+        <Logo as="h1" />
         {authRequired && (
           <button type="button" className="secondary" onClick={handleLogout}>
             Sign out
@@ -193,7 +183,8 @@ function App() {
             onRetry={handleRetryDocuments}
             selectedId={selectedId}
             onSelect={setSelectedId}
-            onRemove={handleRemove}
+            // No onRemove: there's no delete endpoint yet, and in the shared workspace
+            // removing a document would remove it for everyone. The × stays hidden.
             onNew={() => setSelectedId(null)}
           />
         </aside>
@@ -201,12 +192,16 @@ function App() {
         <main className="app-main">
           {selected ? (
             <section className="doc-view">
-              <h2>{selected.name}</h2>
-              <p>
-                {selected.pageCount} {selected.pageCount === 1 ? 'page' : 'pages'}
-              </p>
+              <div className="doc-view-head">
+                <h2>{selected.name}</h2>
+                <p>
+                  {selected.pageCount} {selected.pageCount === 1 ? 'page' : 'pages'}
+                  {selected.isSample && ' · Demo contract'}
+                </p>
+              </div>
+              {/* Stand-in "page" until the PDF viewer is built. */}
               <div className="doc-view-placeholder">
-                The PDF viewer and AI workspace will appear here.
+                <p>The PDF viewer and AI workspace will appear here.</p>
               </div>
             </section>
           ) : (
