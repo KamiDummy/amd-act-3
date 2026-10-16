@@ -1,9 +1,18 @@
 import uuid
 
+import pytest
+from alembic import command
+from alembic.config import Config
 from pydantic import SecretStr
+from sqlalchemy import create_engine
 
 from backend import documents
 from backend.config import settings
+from backend.schema_check import (
+    ALEMBIC_INI,
+    SchemaOutOfDateError,
+    ensure_schema_up_to_date,
+)
 from backend.seed import seed
 from conftest import SAMPLES_DIR
 
@@ -111,3 +120,18 @@ def test_seed_adds_samples_once(db, client):
     listed = client.get("/api/documents").json()
     assert len(listed) == len(added)
     assert all(document["is_sample"] for document in listed)
+
+
+def test_schema_check_fails_on_unmigrated_database():
+    engine = create_engine("sqlite://")
+
+    with pytest.raises(SchemaOutOfDateError, match="alembic upgrade head"):
+        ensure_schema_up_to_date(engine)
+
+
+def test_schema_check_passes_on_migrated_database(tmp_path, monkeypatch):
+    url = f"sqlite:///{tmp_path / 'migrated.db'}"
+    monkeypatch.setattr(settings, "database_url", url)
+    command.upgrade(Config(ALEMBIC_INI), "head")
+
+    ensure_schema_up_to_date(create_engine(url))
