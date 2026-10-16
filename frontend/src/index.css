@@ -86,3 +86,8 @@ button.secondary {
 button.secondary:hover:not(:disabled) {
   background: var(--border);
 }
+
+button.small {
+  padding: 4px 10px;
+  font-size: 14px;
+}

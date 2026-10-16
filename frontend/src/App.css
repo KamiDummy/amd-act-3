@@ -1,3 +1,9 @@
+.app {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
 .app-header {
   display: flex;
   align-items: center;
@@ -12,11 +18,61 @@
   font-size: 18px;
 }
 
-.app-main {
-  padding: 32px 16px;
-  text-align: center;
+.app-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 0;
 }
 
-.upload-success {
-  margin: 16px 0 0;
+.app-sidebar {
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto;
+}
+
+.app-main {
+  min-width: 0;
+  padding: 24px;
+}
+
+.upload-screen {
+  padding-top: 32px;
+}
+
+.doc-view h2 {
+  margin: 0;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.doc-view p {
+  margin: 4px 0 16px;
+}
+
+.doc-view-placeholder {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  text-align: center;
+  padding: 16px;
+}
+
+/* Phones: the sidebar stacks above the content. */
+@media (max-width: 768px) {
+  .app-body {
+    grid-template-columns: 1fr;
+  }
+
+  .app-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 40svh;
+  }
+
+  .app-main {
+    padding: 16px;
+  }
 }
