@@ -19,8 +19,10 @@ function FileUpload({ onUpload }) {
     setError('')
     setChecking(true)
     try {
-      const { pageCount } = await validatePdf(file)
-      onUpload({ file, pageCount })
+      // Quick checks in the browser first, so obvious problems show instantly.
+      await validatePdf(file)
+      // Then the real upload; the checking state stays on while the backend extracts the text.
+      await onUpload(file)
     } catch (err) {
       setError(err.message)
     } finally {

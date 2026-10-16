@@ -10,7 +10,7 @@ import {
   verifyToken,
 } from './api/auth'
 import { setUnauthorizedHandler } from './api/client'
-import { listDocuments } from './api/documents'
+import { listDocuments, uploadDocument } from './api/documents'
 import './App.css'
 
 function App() {
@@ -129,16 +129,11 @@ function App() {
     setSelectedId(null)
   }
 
-  function handleUpload({ file, pageCount }) {
-    const newDocument = {
-      id: crypto.randomUUID(),
-      name: file.name,
-      size: file.size,
-      pageCount,
-      file,
-      uploadedAt: Date.now(),
-    }
-    setDocuments((current) => [...current, newDocument])
+  // Errors (bad PDF, too large, …) are thrown back to FileUpload, which shows them.
+  async function handleUpload(file) {
+    const newDocument = await uploadDocument(file)
+    // The list is newest first, so the new document goes on top.
+    setDocuments((current) => [newDocument, ...current])
     setSelectedId(newDocument.id) // Open what was just uploaded.
   }
 
