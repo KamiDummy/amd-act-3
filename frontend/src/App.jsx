@@ -2,38 +2,92 @@ import { useEffect, useState } from 'react'
 import LoginPage from './components/LoginPage'
 import FileUpload from './components/FileUpload'
 import DocumentSelector from './components/DocumentSelector'
-import { clearToken, getStoredToken, storeToken } from './api/auth'
+import {
+  clearToken,
+  getStoredToken,
+  isAuthRequired,
+  storeToken,
+  verifyToken,
+} from './api/auth'
 import { setUnauthorizedHandler } from './api/client'
 import './App.css'
 
 function App() {
-  const [token, setToken] = useState(getStoredToken)
+  // 'checking' → asking the backend on page load, 'offline' → backend unreachable,
+  // 'login' → show the login page, 'ready' → show the workspace.
+  const [authStatus, setAuthStatus] = useState('checking')
+  // False when the backend has no access code: no login page and no Sign out button.
+  const [authRequired, setAuthRequired] = useState(true)
+  const [connectionError, setConnectionError] = useState('')
+  // Bumped by the Retry button to run the page-load check again.
+  const [checkAttempt, setCheckAttempt] = useState(0)
   // Uploaded documents live in memory for now; a refresh clears them until the backend stores them.
   const [documents, setDocuments] = useState([])
   // null means "no document open", which shows the upload screen.
   const [selectedId, setSelectedId] = useState(null)
 
-  function handleLogin(newToken) {
-    storeToken(newToken)
-    setToken(newToken)
-  }
+  // On page load: is a login needed, and if we have a saved token, does it still work?
+  useEffect(() => {
+    let cancelled = false
 
-  function handleLogout() {
-    clearToken()
-    setToken(null)
-    setDocuments([])
-    setSelectedId(null)
-  }
+    async function checkAuth() {
+      try {
+        const required = await isAuthRequired()
+        if (cancelled) return
+        setAuthRequired(required)
+        if (!required) {
+          setAuthStatus('ready')
+          return
+        }
+        if (!getStoredToken()) {
+          setAuthStatus('login')
+          return
+        }
+        await verifyToken()
+        if (!cancelled) setAuthStatus('ready')
+      } catch (err) {
+        if (cancelled) return
+        if (err.status === 401) {
+          setAuthStatus('login') // The client already cleared the expired token.
+        } else {
+          setConnectionError(err.message)
+          setAuthStatus('offline')
+        }
+      }
+    }
+
+    checkAuth()
+    return () => {
+      cancelled = true
+    }
+  }, [checkAttempt])
 
   // A 401 from any API call means the token expired or the backend restarted: back to login.
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      setToken(null)
+      setAuthStatus('login')
       setDocuments([])
       setSelectedId(null)
     })
     return () => setUnauthorizedHandler(null)
   }, [])
+
+  function handleRetry() {
+    setAuthStatus('checking')
+    setCheckAttempt((n) => n + 1)
+  }
+
+  function handleLogin(token) {
+    storeToken(token)
+    setAuthStatus('ready')
+  }
+
+  function handleLogout() {
+    clearToken()
+    setAuthStatus('login')
+    setDocuments([])
+    setSelectedId(null)
+  }
 
   function handleUpload({ file, pageCount }) {
     const newDocument = {
@@ -59,7 +113,26 @@ function App() {
     }
   }
 
-  if (!token) {
+  if (authStatus === 'checking') {
+    return (
+      <main className="app-status" aria-busy="true">
+        <p>Connecting…</p>
+      </main>
+    )
+  }
+
+  if (authStatus === 'offline') {
+    return (
+      <main className="app-status">
+        <p role="alert">{connectionError}</p>
+        <button type="button" onClick={handleRetry}>
+          Retry
+        </button>
+      </main>
+    )
+  }
+
+  if (authStatus === 'login') {
     return <LoginPage onLogin={handleLogin} />
   }
 
@@ -69,9 +142,11 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>Contract Review</h1>
-        <button type="button" className="secondary" onClick={handleLogout}>
-          Sign out
-        </button>
+        {authRequired && (
+          <button type="button" className="secondary" onClick={handleLogout}>
+            Sign out
+          </button>
+        )}
       </header>
 
       <div className="app-body">

@@ -18,7 +18,7 @@ function LoginPage({ onLogin }) {
     setError('')
     setLoading(true)
     try {
-      const { token } = await login(code)
+      const token = await login(code)
       onLogin(token)
     } catch (err) {
       setError(err.message)
