@@ -2,10 +2,6 @@
 
 ### 1. Database (Supabase)
 
-### 1. Database (Supabase)
-
-### 1. Database (Supabase)
-
 1. Create a free project at [supabase.com](https://supabase.com).
 2. In the SQL Editor, run:
 
