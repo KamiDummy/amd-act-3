@@ -374,3 +374,6 @@ vite.config.ts.timestamp-*
 
 # Uploaded PDFs (backend/storage by default)
 backend/storage/
+
+# Downloaded law XML
+backend/data/
