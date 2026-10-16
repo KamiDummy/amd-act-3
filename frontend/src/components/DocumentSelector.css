@@ -1,0 +1,98 @@
+.doc-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  min-width: 0;
+}
+
+.doc-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doc-selector-header h2 {
+  margin: 0;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.doc-selector-empty {
+  margin: 0;
+  font-size: 14px;
+}
+
+.doc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-item {
+  display: flex;
+  align-items: stretch;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.doc-item:hover {
+  background: var(--accent-soft);
+}
+
+.doc-item.is-selected {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* Reset the global button look: list items are plain rows, not filled buttons. */
+.doc-item button {
+  background: transparent;
+  color: inherit;
+  font-weight: normal;
+  border-radius: 8px;
+}
+
+.doc-item button:hover:not(:disabled) {
+  background: transparent;
+}
+
+.doc-item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  text-align: left;
+}
+
+.doc-item-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-h);
+  font-weight: 600;
+}
+
+.doc-item-meta {
+  font-size: 13px;
+}
+
+.doc-item-remove {
+  padding: 0 10px;
+  font-size: 20px;
+  line-height: 1;
+  opacity: 0.6;
+}
+
+.doc-item-remove:hover:not(:disabled) {
+  opacity: 1;
+  color: var(--danger);
+}
