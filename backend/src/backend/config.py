@@ -1,6 +1,6 @@
 import secrets
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 12 * 60
 
     cors_origins: list[str] = ["http://localhost:5173"]
+
+    @field_validator("jwt_secret", mode="before")
+    @classmethod
+    def generate_secret_if_empty(cls, value: object) -> object:
+        # "JWT_SECRET=" in .env arrives as "", which must not become the signing key.
+        return value or secrets.token_urlsafe(32)
 
     @property
     def auth_enabled(self) -> bool:
