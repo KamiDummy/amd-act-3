@@ -29,7 +29,7 @@
 
 ### Auth
 
-- [ ] Simple access-code gate (not full registration)
+- [x] Simple access-code gate (not full registration)
 
 ### Deployment (later)
 
