@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import LoginPage from './components/LoginPage'
 import FileUpload from './components/FileUpload'
 import DocumentSelector from './components/DocumentSelector'
 import { clearToken, getStoredToken, storeToken } from './api/auth'
+import { setUnauthorizedHandler } from './api/client'
 import './App.css'
 
 function App() {
@@ -23,6 +24,16 @@ function App() {
     setDocuments([])
     setSelectedId(null)
   }
+
+  // A 401 from any API call means the token expired or the backend restarted: back to login.
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setToken(null)
+      setDocuments([])
+      setSelectedId(null)
+    })
+    return () => setUnauthorizedHandler(null)
+  }, [])
 
   function handleUpload({ file, pageCount }) {
     const newDocument = {
