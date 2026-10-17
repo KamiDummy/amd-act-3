@@ -1,0 +1,333 @@
+.lp {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bar);
+  overflow: hidden;
+}
+
+.lp-header {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lp-header h2 {
+  margin: 0;
+  font: 400 22px/1.2 var(--serif);
+}
+
+.lp-summary {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.lp-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.lp-footer {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.lp-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.lp-card p {
+  margin: 0;
+}
+
+.lp-card-title {
+  margin: 0;
+  font-size: 15px;
+}
+
+.lp-intro-title {
+  margin: 0;
+  font: 400 22px/1.25 var(--serif);
+}
+
+.lp-muted {
+  color: var(--text-muted);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.lp-small {
+  font-size: 12.5px;
+}
+
+.lp-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.lp-elapsed {
+  font: 500 12px var(--mono);
+  color: var(--text-muted);
+}
+
+/* Indeterminate bar: the backend doesn't report progress, only "done". */
+.lp-progress {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent-soft);
+  overflow: hidden;
+}
+
+.lp-progress span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: lp-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes lp-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(290%);
+  }
+}
+
+.lp-error {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.lp-error .lp-muted {
+  color: var(--text-muted);
+}
+
+.lp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-finding {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  scroll-margin: 12px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.lp-finding.is-active {
+  box-shadow: var(--shadow);
+}
+
+.lp-finding.is-active.sev-high {
+  border-color: var(--high);
+}
+
+.lp-finding.is-active.sev-medium {
+  border-color: var(--med);
+}
+
+.lp-finding.is-active.sev-low {
+  border-color: var(--low);
+}
+
+/* Reset the global filled-button look for the clickable card header. */
+.lp-finding-head {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 12px 14px;
+  background: transparent;
+  color: inherit;
+  font-weight: normal;
+  text-align: left;
+  border-radius: 12px;
+}
+
+.lp-finding-head:hover:not(:disabled) {
+  background: transparent;
+}
+
+.lp-finding-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lp-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* A small swatch in the same colour as the highlight on the page. */
+.lp-sev::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.lp-sev.sev-high {
+  color: var(--high);
+}
+
+.lp-sev.sev-high::before {
+  background: var(--high-bg);
+  box-shadow: inset 0 -2px 0 var(--high);
+}
+
+.lp-sev.sev-medium {
+  color: var(--med);
+}
+
+.lp-sev.sev-medium::before {
+  background: var(--med-bg);
+  box-shadow: inset 0 -2px 0 var(--med);
+}
+
+.lp-sev.sev-low {
+  color: var(--low);
+}
+
+.lp-sev.sev-low::before {
+  background: var(--low-bg);
+  box-shadow: inset 0 -2px 0 var(--low);
+}
+
+.lp-page {
+  font: 500 11px var(--mono);
+  color: var(--text-muted);
+}
+
+.lp-finding-title {
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-h);
+}
+
+.lp-finding-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 14px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.lp-finding-body p {
+  margin: 0;
+}
+
+.lp-quote {
+  margin: 0;
+  font: italic 14.5px/1.45 var(--serif);
+  color: var(--text-h);
+}
+
+.lp-todo {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+
+.lp-eyebrow {
+  margin: 4px 0 0;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.lp-citations {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lp-citation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bar);
+}
+
+.lp-citation-ref {
+  font: 500 11.5px/1.4 var(--mono);
+  color: var(--text-h);
+}
+
+.lp-citation-note {
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--text-h);
+}
+
+/* Law text can be long; show the start and let the link lead to the rest. */
+.lp-citation-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.lp-citation a {
+  font-size: 12.5px;
+  color: var(--text-h);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-progress span {
+    animation-duration: 4s;
+  }
+}

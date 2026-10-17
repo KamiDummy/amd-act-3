@@ -1,0 +1,55 @@
+/* A highlighter stroke over one line of text. "multiply" tints the words underneath
+   without hiding them, like a real highlighter on paper. */
+.hl-rect {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  pointer-events: auto;
+  cursor: pointer;
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s,
+    box-shadow 0.15s;
+}
+
+.hl-rect:hover:not(:disabled),
+.hl-rect.is-active {
+  opacity: 0.85;
+}
+
+.hl-rect:focus-visible {
+  outline: 2px solid var(--text-h);
+  outline-offset: 1px;
+}
+
+.hl-rect.sev-high,
+.hl-rect.sev-high:hover:not(:disabled) {
+  background: var(--high-bg);
+  box-shadow: inset 0 -2px 0 var(--high);
+}
+
+.hl-rect.sev-medium,
+.hl-rect.sev-medium:hover:not(:disabled) {
+  background: var(--med-bg);
+  box-shadow: inset 0 -2px 0 var(--med);
+}
+
+.hl-rect.sev-low,
+.hl-rect.sev-low:hover:not(:disabled) {
+  background: var(--low-bg);
+  box-shadow: inset 0 -2px 0 var(--low);
+}
+
+.hl-rect.is-active.sev-high {
+  box-shadow: inset 0 -2px 0 var(--high), 0 0 0 1.5px var(--high);
+}
+
+.hl-rect.is-active.sev-medium {
+  box-shadow: inset 0 -2px 0 var(--med), 0 0 0 1.5px var(--med);
+}
+
+.hl-rect.is-active.sev-low {
+  box-shadow: inset 0 -2px 0 var(--low), 0 0 0 1.5px var(--low);
+}
