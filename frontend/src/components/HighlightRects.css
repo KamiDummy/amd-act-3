@@ -53,3 +53,14 @@
 .hl-rect.is-active.sev-low {
   box-shadow: inset 0 -2px 0 var(--low), 0 0 0 1.5px var(--low);
 }
+
+/* Passages the user asked to have explained: the design's yellow "my highlight". */
+.hl-rect.sev-mine,
+.hl-rect.sev-mine:hover:not(:disabled) {
+  background: var(--mine-bg);
+  box-shadow: inset 0 -2px 0 var(--mine);
+}
+
+.hl-rect.is-active.sev-mine {
+  box-shadow: inset 0 -2px 0 var(--mine), 0 0 0 1.5px var(--mine);
+}

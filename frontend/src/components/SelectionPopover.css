@@ -1,0 +1,36 @@
+/* Fixed to the viewport so it sits over the selection whatever is scrolled. */
+.sel-popover {
+  position: fixed;
+  z-index: 50;
+  transform: translate(-50%, calc(-100% - 8px));
+  display: flex;
+  padding: 4px;
+  border-radius: 9px;
+  background: #1d1c1a;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  white-space: nowrap;
+}
+
+/* Near the top edge there's no room above, so it opens under the selection. */
+.sel-popover.is-below {
+  transform: translate(-50%, 8px);
+}
+
+.sel-popover button {
+  padding: 7px 12px;
+  border-radius: 6px;
+  background: transparent;
+  color: #f7f5f0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sel-popover button:hover:not(:disabled) {
+  background: #3a3833;
+}
+
+.sel-popover-note {
+  padding: 7px 10px;
+  font-size: 12.5px;
+  color: #f7f5f0;
+}
