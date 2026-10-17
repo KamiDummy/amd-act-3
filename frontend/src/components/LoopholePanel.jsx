@@ -1,6 +1,5 @@
-import './LoopholePanel.css'
-
-const SEVERITY_LABEL = { high: 'High risk', medium: 'Medium', low: 'Low' }
+import CitationList from './CitationList'
+import { SEVERITY_LABEL } from './severity'
 
 function formatElapsed(seconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
@@ -15,17 +14,9 @@ function formatDate(iso) {
   })
 }
 
-// The right-hand panel: start a loophole scan, follow its progress, and read the findings.
+// The "Loopholes" tab: start a scan, follow its progress, and read the findings.
 // Clicking a finding selects it; the parent scrolls the PDF to its highlight.
-function LoopholePanel({
-  scanning,
-  elapsedSeconds,
-  error,
-  result,
-  activeIndex,
-  onSelect,
-  onScan,
-}) {
+function LoopholePanel({ scanning, elapsedSeconds, error, result, activeIndex, onSelect, onScan }) {
   const findings = result?.findings ?? []
   const counts = { high: 0, medium: 0, low: 0 }
   findings.forEach((f) => {
@@ -106,39 +97,28 @@ function LoopholePanel({
   }
 
   return (
-    <aside className="lp" aria-label="Loopholes">
-      <header className="lp-header">
-        <div>
-          <h2>Loopholes</h2>
-          {result && !scanning && (
-            <p className="lp-summary">
-              {findings.length === 0
-                ? 'No issues'
-                : ['high', 'medium', 'low']
-                    .filter((s) => counts[s])
-                    .map((s) => `${counts[s]} ${s}`)
-                    .join(' · ')}
-            </p>
-          )}
-        </div>
-        {result && !scanning && (
+    <>
+      {result && !scanning && (
+        <div className="lp-subheader">
+          <p className="lp-summary">
+            {findings.length === 0
+              ? 'No issues'
+              : ['high', 'medium', 'low']
+                  .filter((s) => counts[s])
+                  .map((s) => `${counts[s]} ${s}`)
+                  .join(' · ')}
+            <span className="lp-checked">
+              {' '}
+              · checked {formatDate(result.scannedAt)} · {result.model}
+            </span>
+          </p>
           <button type="button" className="secondary small" onClick={onScan}>
             Re-check
           </button>
-        )}
-      </header>
-
+        </div>
+      )}
       <div className="lp-body">{body}</div>
-
-      <footer className="lp-footer">
-        {result && !scanning && (
-          <span>
-            Checked {formatDate(result.scannedAt)} · {result.model}
-          </span>
-        )}
-        <span>Information, not legal advice.</span>
-      </footer>
-    </aside>
+    </>
   )
 }
 
@@ -173,31 +153,7 @@ function FindingCard({ finding, index, active, onSelect }) {
           <p className="lp-todo">
             <b>What you can do:</b> {finding.recommendation}
           </p>
-
-          <h4 className="lp-eyebrow">Related Canadian law</h4>
-          {finding.citations.length === 0 ? (
-            <p className="lp-muted lp-small">
-              No federal law matched this clause. Contracts like this are usually governed
-              by provincial law, so check your province’s rules.
-            </p>
-          ) : (
-            <ul className="lp-citations">
-              {finding.citations.map((c, i) => (
-                <li key={i} className="lp-citation">
-                  <span className="lp-citation-ref">
-                    {c.law_title}, s. {c.section}
-                  </span>
-                  {c.marginal_note && (
-                    <span className="lp-citation-note">{c.marginal_note}</span>
-                  )}
-                  <span className="lp-citation-text">{c.text}</span>
-                  <a href={c.url} target="_blank" rel="noopener noreferrer">
-                    Read the law ↗
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
+          <CitationList citations={finding.citations} />
         </div>
       )}
     </article>
