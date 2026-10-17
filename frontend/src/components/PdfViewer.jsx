@@ -10,8 +10,8 @@ const MAX_PAGE_WIDTH = 820
 const SIDE_PADDING = 48
 
 // Shows every page of a stored PDF, sized to fit the available width.
-// renderPageOverlay(pageNumber) can draw on top of a page; later tasks use it for
-// highlight rectangles, whose coordinates are fractions of the page size.
+// renderPageOverlay(pageNumber) draws on top of a page, e.g. highlight rectangles,
+// whose coordinates are fractions of the page size.
 // scrollTarget { pageNumber, top, nonce } scrolls to that spot (top is a page fraction);
 // a new nonce scrolls again even to the same spot.
 // Give it key={documentId} so switching documents starts with fresh state.
@@ -128,39 +128,32 @@ function PdfViewer({ documentId, renderPageOverlay, scrollTarget }) {
 
   return (
     <section className="pdf-viewer" aria-label="Document">
-      <div className="pdf-toolbar">
-        <span className="pdf-toolbar-info">
-          {numPages ? `${numPages} ${numPages === 1 ? 'page' : 'pages'}` : ''}
-        </span>
-        <div className="pdf-zoom" role="group" aria-label="Zoom">
-          <button
-            type="button"
-            className="secondary small"
-            onClick={() => setZoomIndex((i) => Math.max(i - 1, 0))}
-            disabled={zoomIndex === 0}
-            aria-label="Zoom out"
-          >
-            −
-          </button>
-          <button
-            type="button"
-            className="secondary small pdf-zoom-level"
-            onClick={() => setZoomIndex(1)}
-            title="Fit to width"
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-          <button
-            type="button"
-            className="secondary small"
-            // Capped, because quick repeated clicks can arrive before the button disables.
-            onClick={() => setZoomIndex((i) => Math.min(i + 1, ZOOM_LEVELS.length - 1))}
-            disabled={zoomIndex === ZOOM_LEVELS.length - 1}
-            aria-label="Zoom in"
-          >
-            +
-          </button>
-        </div>
+      <div className="pdf-zoom" role="group" aria-label="Zoom">
+        <button
+          type="button"
+          onClick={() => setZoomIndex((i) => Math.max(i - 1, 0))}
+          disabled={zoomIndex === 0}
+          aria-label="Zoom out"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          className="pdf-zoom-level"
+          onClick={() => setZoomIndex(1)}
+          title="Fit to width"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+        <button
+          type="button"
+          // Capped, because quick repeated clicks can arrive before the button disables.
+          onClick={() => setZoomIndex((i) => Math.min(i + 1, ZOOM_LEVELS.length - 1))}
+          disabled={zoomIndex === ZOOM_LEVELS.length - 1}
+          aria-label="Zoom in"
+        >
+          +
+        </button>
       </div>
       <div className="pdf-scroll" ref={measureRef}>
         {content}

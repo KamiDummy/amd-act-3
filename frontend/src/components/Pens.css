@@ -1,0 +1,30 @@
+/* Sets --pen and --pen-bg from a palette colour, for highlights, cards and swatches. */
+.pen-yellow {
+  --pen: var(--pen-yellow);
+  --pen-bg: var(--pen-yellow-bg);
+}
+
+.pen-red {
+  --pen: var(--pen-red);
+  --pen-bg: var(--pen-red-bg);
+}
+
+.pen-orange {
+  --pen: var(--pen-orange);
+  --pen-bg: var(--pen-orange-bg);
+}
+
+.pen-green {
+  --pen: var(--pen-green);
+  --pen-bg: var(--pen-green-bg);
+}
+
+.pen-blue {
+  --pen: var(--pen-blue);
+  --pen-bg: var(--pen-blue-bg);
+}
+
+.pen-purple {
+  --pen: var(--pen-purple);
+  --pen-bg: var(--pen-purple-bg);
+}

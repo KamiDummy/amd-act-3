@@ -1,13 +1,23 @@
 import { useState } from 'react'
 import './NoteEditor.css'
 
-// A personal note on a finding, an explanation or the whole document.
+// A personal note on a marked passage or the whole document.
 // note: the saved text, or null. onSave(text): an empty text deletes the note.
-function NoteEditor({ note, onSave, addLabel = '+ Add a note', placeholder }) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState('')
+// startEditing opens the editor right away, e.g. for a note just added from the page;
+// onCancel is called when the user closes the editor without saving.
+function NoteEditor({
+  note,
+  onSave,
+  onCancel,
+  startEditing = false,
+  addLabel = '+ Add a note',
+  label = 'Your note',
+  placeholder,
+}) {
+  const [editing, setEditing] = useState(startEditing)
+  const [draft, setDraft] = useState(note ?? '')
 
-  function startEditing() {
+  function edit() {
     setDraft(note ?? '')
     setEditing(true)
   }
@@ -17,11 +27,16 @@ function NoteEditor({ note, onSave, addLabel = '+ Add a note', placeholder }) {
     setEditing(false)
   }
 
+  function cancel() {
+    setEditing(false)
+    onCancel?.()
+  }
+
   function handleKeyDown(event) {
     if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) save()
     if (event.key === 'Escape') {
       event.stopPropagation()
-      setEditing(false)
+      cancel()
     }
   }
 
@@ -33,7 +48,7 @@ function NoteEditor({ note, onSave, addLabel = '+ Add a note', placeholder }) {
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder ?? 'Write a note for yourself or your lawyer…'}
-          aria-label="Note"
+          aria-label={label}
           rows={3}
           autoFocus
         />
@@ -41,7 +56,7 @@ function NoteEditor({ note, onSave, addLabel = '+ Add a note', placeholder }) {
           <button type="button" className="small" onClick={save}>
             Save note
           </button>
-          <button type="button" className="note-link" onClick={() => setEditing(false)}>
+          <button type="button" className="note-link" onClick={cancel}>
             Cancel
           </button>
           <span className="note-hint">Ctrl+Enter to save</span>
@@ -53,10 +68,10 @@ function NoteEditor({ note, onSave, addLabel = '+ Add a note', placeholder }) {
   if (note) {
     return (
       <div className="note">
-        <span className="note-label">Your note</span>
+        <span className="note-label">{label}</span>
         <p className="note-text">{note}</p>
         <div className="note-actions">
-          <button type="button" className="note-link" onClick={startEditing}>
+          <button type="button" className="note-link" onClick={edit}>
             Edit
           </button>
           <button type="button" className="note-link" onClick={() => onSave('')}>
@@ -69,7 +84,7 @@ function NoteEditor({ note, onSave, addLabel = '+ Add a note', placeholder }) {
 
   return (
     <div className="note">
-      <button type="button" className="note-link note-add" onClick={startEditing}>
+      <button type="button" className="note-link note-add" onClick={edit}>
         {addLabel}
       </button>
     </div>
