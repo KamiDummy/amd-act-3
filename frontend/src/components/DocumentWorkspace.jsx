@@ -19,11 +19,17 @@ import ReviewPanel from './ReviewPanel'
 import SelectionPopover from './SelectionPopover'
 import './DocumentWorkspace.css'
 
+// Rectangles from the backend and from a browser selection differ slightly, so tops this
+// close (a fraction of the page) are taken as the same line.
+const SAME_LINE = 0.008
+
 // Reading order: by page, then down the page. Passages not found on the page go last.
 function byPosition(a, b) {
   const [ra, rb] = [a.rects[0], b.rects[0]]
   if (!ra || !rb) return (ra ? 0 : 1) - (rb ? 0 : 1)
-  return ra.page_number - rb.page_number || ra.top - rb.top || ra.x0 - rb.x0
+  if (ra.page_number !== rb.page_number) return ra.page_number - rb.page_number
+  if (Math.abs(ra.top - rb.top) > SAME_LINE) return ra.top - rb.top
+  return ra.x0 - rb.x0
 }
 
 function scrollCardIntoView(key) {
