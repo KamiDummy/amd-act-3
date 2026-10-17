@@ -9,3 +9,18 @@ import { apiRequest } from './client'
 export function scanLoopholes(documentId) {
   return apiRequest(`/api/documents/${documentId}/loopholes`, { method: 'POST' })
 }
+
+// The longest selection the backend accepts.
+export const MAX_EXPLAIN_CHARS = 4000
+
+// Explains a passage the user selected. Takes about 10 seconds.
+// pageNumber is the page the selection starts on; it picks the right spot when the
+// same text appears twice. Resolves with { model, highlight, explanation,
+// severity ('high' | 'medium' | 'low' | 'none'), citations }.
+// Errors: 502 the AI failed, 503 not configured, 422 empty or too long a selection.
+export function explainSelection(documentId, text, pageNumber) {
+  return apiRequest(`/api/documents/${documentId}/explain`, {
+    method: 'POST',
+    body: { text, page_number: pageNumber },
+  })
+}
