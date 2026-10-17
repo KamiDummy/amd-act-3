@@ -38,12 +38,21 @@
   padding-top: 24px;
 }
 
-.doc-view {
-  max-width: 760px;
-  margin: 0 auto;
+/* With a document open, the viewer fills the area and scrolls inside itself,
+   so the title and zoom bar stay in view. */
+.app-main.has-viewer {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  overflow: hidden;
+  padding: 20px 24px 24px;
+}
+
+.doc-view {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .doc-view-head h2 {
@@ -55,32 +64,6 @@
 
 .doc-view-head p {
   margin: 6px 0 0;
-  font-size: 13.5px;
-  color: var(--text-muted);
-}
-
-/* A blank sheet of paper with faint ruled lines, like the design's page previews. */
-.doc-view-placeholder {
-  min-height: 420px;
-  display: grid;
-  place-items: center;
-  padding: 48px 32px;
-  text-align: center;
-  border-radius: 4px;
-  /* Lines stay inside the margins; the paper colour fills the whole sheet. */
-  background:
-    repeating-linear-gradient(to bottom, transparent 0 22px, var(--border) 22px 23px)
-      content-box,
-    var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.doc-view-placeholder p {
-  margin: 0;
-  padding: 8px 14px;
-  border-radius: 12px;
-  background: var(--bar);
-  border: 1px solid var(--border);
   font-size: 13.5px;
   color: var(--text-muted);
 }
@@ -115,9 +98,15 @@
     font-size: 24px;
   }
 
-  .doc-view-placeholder {
-    min-height: 280px;
-    padding: 32px 16px;
+  /* The page grows naturally on phones, so give the viewer its own height. */
+  .app-main.has-viewer {
+    overflow: visible;
+    padding: 16px;
+  }
+
+  .doc-view .pdf-viewer {
+    flex: none;
+    height: 75svh;
   }
 }
 

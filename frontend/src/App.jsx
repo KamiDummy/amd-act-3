@@ -12,6 +12,7 @@ import {
 import { setUnauthorizedHandler } from './api/client'
 import { listDocuments, uploadDocument } from './api/documents'
 import Logo from './components/Logo'
+import PdfViewer from './components/PdfViewer'
 import './App.css'
 
 function App() {
@@ -199,7 +200,7 @@ function App() {
           />
         </aside>
 
-        <main className="app-main">
+        <main className={selected ? 'app-main has-viewer' : 'app-main'}>
           {selected ? (
             <section className="doc-view">
               <div className="doc-view-head">
@@ -209,10 +210,8 @@ function App() {
                   {selected.isSample && ' · Demo contract'}
                 </p>
               </div>
-              {/* Stand-in "page" until the PDF viewer is built. */}
-              <div className="doc-view-placeholder">
-                <p>The PDF viewer and AI workspace will appear here.</p>
-              </div>
+              {/* key: a different document gets a fresh viewer (pages, zoom, errors). */}
+              <PdfViewer key={selected.id} documentId={selected.id} />
             </section>
           ) : (
             <div className="upload-screen">
