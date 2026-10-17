@@ -47,25 +47,12 @@
   padding: 20px 24px 24px;
 }
 
-.doc-view {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.doc-view-head h2 {
-  margin: 0;
-  font: 400 30px/1.15 var(--serif);
-  letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
-}
-
-.doc-view-head p {
-  margin: 6px 0 0;
-  font-size: 13.5px;
-  color: var(--text-muted);
+/* Narrower screens put the review panel under the contract, so this area scrolls. */
+@media (max-width: 1100px) {
+  .app-main.has-viewer {
+    display: block;
+    overflow-y: auto;
+  }
 }
 
 /* Phones: the sidebar stacks above the content. */
@@ -94,19 +81,10 @@
     padding: 20px 16px;
   }
 
-  .doc-view-head h2 {
-    font-size: 24px;
-  }
-
-  /* The page grows naturally on phones, so give the viewer its own height. */
+  /* The page grows naturally on phones (the viewer has its own height). */
   .app-main.has-viewer {
     overflow: visible;
     padding: 16px;
-  }
-
-  .doc-view .pdf-viewer {
-    flex: none;
-    height: 75svh;
   }
 }
 
