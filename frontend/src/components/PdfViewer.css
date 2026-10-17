@@ -1,0 +1,118 @@
+.pdf-viewer {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--well);
+  border: 1px solid var(--border);
+}
+
+.pdf-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bar);
+}
+
+.pdf-toolbar-info {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.pdf-zoom {
+  display: flex;
+  gap: 4px;
+}
+
+.pdf-zoom button {
+  min-width: 32px;
+}
+
+.pdf-zoom-level {
+  min-width: 56px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdf-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 24px;
+}
+
+.pdf-document {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  /* Wider than the panel when zoomed in; the panel scrolls sideways then. */
+  width: max-content;
+  min-width: 100%;
+}
+
+.pdf-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Each page is a sheet of paper. Overlays use the sheet as their frame, so
+   highlight boxes given as fractions of the page line up at any zoom. */
+.pdf-sheet {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(40, 35, 25, 0.1);
+}
+
+.pdf-sheet .react-pdf__Page__canvas {
+  display: block;
+}
+
+.pdf-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pdf-page-loading {
+  aspect-ratio: 8.5 / 11;
+  background: #fff;
+}
+
+.pdf-page-label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.pdf-message {
+  margin: 48px auto;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.pdf-message p {
+  margin: 0;
+}
+
+.pdf-message[role='alert'] {
+  color: var(--danger);
+}
+
+@media (max-width: 768px) {
+  .pdf-scroll {
+    padding: 12px;
+  }
+}

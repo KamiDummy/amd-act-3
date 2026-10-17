@@ -24,7 +24,8 @@ export function setUnauthorizedHandler(handler) {
 //   method - 'GET' by default
 //   body   - a plain object (sent as JSON) or FormData (sent as-is, for file uploads)
 //   auth   - false for requests that must not log the user out on a 401, like the login itself
-export async function apiRequest(path, { method = 'GET', body, auth = true } = {}) {
+//   as     - 'json' by default, or 'blob' for files such as the original PDF
+export async function apiRequest(path, { method = 'GET', body, auth = true, as = 'json' } = {}) {
   const headers = {}
   const token = getStoredToken()
   if (auth && token) {
@@ -57,6 +58,9 @@ export async function apiRequest(path, { method = 'GET', body, auth = true } = {
 
   if (response.status === 204) {
     return null
+  }
+  if (as === 'blob') {
+    return response.blob()
   }
   const text = await response.text()
   return text ? JSON.parse(text) : null
