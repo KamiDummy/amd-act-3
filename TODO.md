@@ -14,18 +14,19 @@
 - [x] PDF upload endpoint
 - [x] Text extraction (pdfplumber)
 - [x] Call Token Factory API, get flagged issues back (loophole scan, cross-referenced with law DB)
-- [ ] Display results in frontend
+- [x] Display results in frontend
 
 ### Highlight-to-law search
 
-- [ ] Set up react-pdf-highlighter in frontend
+- [x] PDF viewer with highlights and text selection (react-pdf)
 - [x] Embedding model in backend (sentence-transformers)
 - [x] Load federal statutes and regulations into pgvector
 - [x] Endpoint: selected text → vector search → LLM explains, with citation
 
 ### Document Q&A
 
-- [ ] Chat endpoint using full extracted text in context
+- [x] Chat endpoint using full extracted text in context, with document references and law citations
+- [ ] Chat UI in frontend
 
 ### Auth
 
