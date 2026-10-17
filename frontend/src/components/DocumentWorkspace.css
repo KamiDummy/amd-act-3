@@ -1,0 +1,55 @@
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.workspace-head h2 {
+  margin: 0;
+  font: 400 30px/1.15 var(--serif);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.workspace-head p {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  color: var(--text-muted);
+}
+
+/* Contract on the left, review panel on the right, like the design. */
+.workspace-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(320px, 32vw, 420px);
+  gap: 16px;
+}
+
+/* Not enough room for both side by side: the panel goes under the contract,
+   and the page scrolls instead of each column. */
+@media (max-width: 1100px) {
+  .workspace-body {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-body > .pdf-viewer {
+    height: 75svh;
+  }
+
+  .workspace-body > .lp {
+    max-height: none;
+  }
+
+  .workspace-body > .lp .lp-body {
+    overflow: visible;
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace-head h2 {
+    font-size: 24px;
+  }
+}

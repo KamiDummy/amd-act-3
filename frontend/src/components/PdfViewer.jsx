@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Document, Page } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { getDocumentFile } from '../api/documents'
@@ -12,8 +12,10 @@ const SIDE_PADDING = 48
 // Shows every page of a stored PDF, sized to fit the available width.
 // renderPageOverlay(pageNumber) can draw on top of a page; later tasks use it for
 // highlight rectangles, whose coordinates are fractions of the page size.
+// scrollTarget { pageNumber, top, nonce } scrolls to that spot (top is a page fraction);
+// a new nonce scrolls again even to the same spot.
 // Give it key={documentId} so switching documents starts with fresh state.
-function PdfViewer({ documentId, renderPageOverlay }) {
+function PdfViewer({ documentId, renderPageOverlay, scrollTarget }) {
   const scrollRef = useRef(null)
   const [file, setFile] = useState(null)
   const [error, setError] = useState('')
@@ -38,16 +40,35 @@ function PdfViewer({ documentId, renderPageOverlay }) {
     }
   }, [documentId, attempt])
 
-  // Re-fit the pages when the window or panel width changes.
-  useEffect(() => {
-    const element = scrollRef.current
+  // Measure the available width as soon as the scroll area exists, then re-fit the
+  // pages whenever it changes. Measuring right away matters: ResizeObserver only reports
+  // when the browser draws a frame, which a background tab may not do for a while.
+  const measureRef = useCallback((element) => {
+    scrollRef.current = element
     if (!element) return
-    const observer = new ResizeObserver(([entry]) => {
-      setContainerWidth(entry.contentRect.width)
-    })
+    const contentWidth = () => {
+      const style = getComputedStyle(element)
+      return element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight)
+    }
+    setContainerWidth(contentWidth())
+    const observer = new ResizeObserver(() => setContainerWidth(contentWidth()))
     observer.observe(element)
     return () => observer.disconnect()
   }, [])
+
+  // Bring a highlight into view, a little below the top edge so its context shows.
+  useEffect(() => {
+    const scroller = scrollRef.current
+    if (!scrollTarget || !scroller) return
+    const sheet = scroller.querySelector(
+      `.pdf-page[data-page-number="${scrollTarget.pageNumber}"] .pdf-sheet`,
+    )
+    if (!sheet) return // Pages not rendered yet.
+    const sheetBox = sheet.getBoundingClientRect()
+    const scrollerBox = scroller.getBoundingClientRect()
+    const y = scroller.scrollTop + sheetBox.top - scrollerBox.top + scrollTarget.top * sheetBox.height
+    scroller.scrollTo({ top: Math.max(0, y - 120), behavior: 'smooth' })
+  }, [scrollTarget])
 
   function handleRetry() {
     setError('')
@@ -141,7 +162,7 @@ function PdfViewer({ documentId, renderPageOverlay }) {
           </button>
         </div>
       </div>
-      <div className="pdf-scroll" ref={scrollRef}>
+      <div className="pdf-scroll" ref={measureRef}>
         {content}
       </div>
     </section>

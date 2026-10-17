@@ -12,7 +12,7 @@ import {
 import { setUnauthorizedHandler } from './api/client'
 import { listDocuments, uploadDocument } from './api/documents'
 import Logo from './components/Logo'
-import PdfViewer from './components/PdfViewer'
+import DocumentWorkspace from './components/DocumentWorkspace'
 import './App.css'
 
 function App() {
@@ -202,17 +202,8 @@ function App() {
 
         <main className={selected ? 'app-main has-viewer' : 'app-main'}>
           {selected ? (
-            <section className="doc-view">
-              <div className="doc-view-head">
-                <h2>{selected.name}</h2>
-                <p>
-                  {selected.pageCount} {selected.pageCount === 1 ? 'page' : 'pages'}
-                  {selected.isSample && ' · Demo contract'}
-                </p>
-              </div>
-              {/* key: a different document gets a fresh viewer (pages, zoom, errors). */}
-              <PdfViewer key={selected.id} documentId={selected.id} />
-            </section>
+            // key: a different document gets a fresh workspace (pages, zoom, scan, selection).
+            <DocumentWorkspace key={selected.id} document={selected} />
           ) : (
             <div className="upload-screen">
               <FileUpload onUpload={handleUpload} />
