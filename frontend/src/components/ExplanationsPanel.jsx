@@ -1,9 +1,12 @@
+import { explanationNoteKey } from '../utils/notes'
 import CitationList from './CitationList'
+import NoteEditor from './NoteEditor'
 import { SEVERITY_LABEL } from './severity'
 
 // The "Explanations" tab: every passage the user asked about, newest first.
 // items: [{ id, text, pageNumber, status: 'loading' | 'done' | 'error', error, result }]
-function ExplanationsPanel({ items, activeId, onSelect, onRemove, onRetry }) {
+// notes: { [key]: { text } }; onSaveNote(key, text) saves (empty text deletes).
+function ExplanationsPanel({ items, activeId, onSelect, onRemove, onRetry, notes, onSaveNote }) {
   return (
     <div className="lp-body">
       {items.length === 0 ? (
@@ -26,6 +29,8 @@ function ExplanationsPanel({ items, activeId, onSelect, onRemove, onRetry }) {
                 onSelect={onSelect}
                 onRemove={onRemove}
                 onRetry={onRetry}
+                note={notes[explanationNoteKey(item.id)]?.text ?? null}
+                onSaveNote={(text) => onSaveNote(explanationNoteKey(item.id), text)}
               />
             </li>
           ))}
@@ -35,7 +40,7 @@ function ExplanationsPanel({ items, activeId, onSelect, onRemove, onRetry }) {
   )
 }
 
-function ExplanationCard({ item, active, onSelect, onRemove, onRetry }) {
+function ExplanationCard({ item, active, onSelect, onRemove, onRetry, note, onSaveNote }) {
   const { status, result } = item
   const severity = result?.severity
   return (
@@ -58,6 +63,7 @@ function ExplanationCard({ item, active, onSelect, onRemove, onRetry }) {
             {status === 'loading' && <span className="lp-sev">Explaining…</span>}
             {status === 'error' && <span className="lp-sev lp-sev-error">Didn’t finish</span>}
             <span className="lp-page">p. {item.pageNumber}</span>
+            {note && <span className="lp-has-note">✎ Note</span>}
           </span>
           <span className="lp-quote lp-quote-clamp">“{item.text}”</span>
         </button>
@@ -103,6 +109,7 @@ function ExplanationCard({ item, active, onSelect, onRemove, onRetry }) {
         <div className="lp-finding-body">
           <p>{result.explanation}</p>
           <CitationList citations={result.citations} />
+          <NoteEditor note={note} onSave={onSaveNote} />
         </div>
       )}
     </article>

@@ -1,4 +1,6 @@
+import { findingNoteKey } from '../utils/notes'
 import CitationList from './CitationList'
+import NoteEditor from './NoteEditor'
 import { SEVERITY_LABEL } from './severity'
 
 function formatElapsed(seconds) {
@@ -16,7 +18,18 @@ function formatDate(iso) {
 
 // The "Loopholes" tab: start a scan, follow its progress, and read the findings.
 // Clicking a finding selects it; the parent scrolls the PDF to its highlight.
-function LoopholePanel({ scanning, elapsedSeconds, error, result, activeIndex, onSelect, onScan }) {
+// notes: { [key]: { text } }; onSaveNote(key, text) saves (empty text deletes).
+function LoopholePanel({
+  scanning,
+  elapsedSeconds,
+  error,
+  result,
+  activeIndex,
+  onSelect,
+  onScan,
+  notes,
+  onSaveNote,
+}) {
   const findings = result?.findings ?? []
   const counts = { high: 0, medium: 0, low: 0 }
   findings.forEach((f) => {
@@ -89,6 +102,8 @@ function LoopholePanel({ scanning, elapsedSeconds, error, result, activeIndex, o
               index={index}
               active={index === activeIndex}
               onSelect={onSelect}
+              note={notes[findingNoteKey(finding)]?.text ?? null}
+              onSaveNote={(text) => onSaveNote(findingNoteKey(finding), text)}
             />
           </li>
         ))}
@@ -122,7 +137,7 @@ function LoopholePanel({ scanning, elapsedSeconds, error, result, activeIndex, o
   )
 }
 
-function FindingCard({ finding, index, active, onSelect }) {
+function FindingCard({ finding, index, active, onSelect, note, onSaveNote }) {
   const located = finding.highlight.length > 0
   return (
     <article
@@ -142,6 +157,7 @@ function FindingCard({ finding, index, active, onSelect }) {
           <span className="lp-page">
             {located ? `p. ${finding.page_number}` : 'Not found in PDF'}
           </span>
+          {note && <span className="lp-has-note">✎ Note</span>}
         </span>
         <span className="lp-finding-title">{finding.title}</span>
       </button>
@@ -154,6 +170,7 @@ function FindingCard({ finding, index, active, onSelect }) {
             <b>What you can do:</b> {finding.recommendation}
           </p>
           <CitationList citations={finding.citations} />
+          <NoteEditor note={note} onSave={onSaveNote} />
         </div>
       )}
     </article>
