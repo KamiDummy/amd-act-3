@@ -13,14 +13,35 @@ export function scanLoopholes(documentId) {
 // The longest selection the backend accepts.
 export const MAX_EXPLAIN_CHARS = 4000
 
-// Explains a passage the user selected. Takes about 10 seconds.
+// Checks a passage the user selected for risks. Takes 10 to 30 seconds.
 // pageNumber is the page the selection starts on; it picks the right spot when the
 // same text appears twice. Resolves with { model, highlight, explanation,
-// severity ('high' | 'medium' | 'low' | 'none'), citations }.
+// severity ('high' | 'medium' | 'low' | 'none'), recommendation (empty when it's fine),
+// citations }.
 // Errors: 502 the AI failed, 503 not configured, 422 empty or too long a selection.
 export function explainSelection(documentId, text, pageNumber) {
   return apiRequest(`/api/documents/${documentId}/explain`, {
     method: 'POST',
     body: { text, page_number: pageNumber },
+  })
+}
+
+// The longest chat question the backend accepts.
+export const MAX_QUESTION_CHARS = 2000
+
+// Asks a question about the document. Takes 10 to 30 seconds.
+// history: the conversation so far, oldest first, as [{ role: 'user' | 'assistant', content }];
+// the backend only reads the last 20. selection: an attached passage { text, pageNumber }, or null.
+// Resolves with { model, answer, references, citations }. Each reference is a passage
+// the answer relies on: { quote, page_number, highlight }.
+// Errors: 502 the AI failed, 503 not configured, 422 empty or too long a question.
+export function askChat(documentId, question, history, selection) {
+  return apiRequest(`/api/documents/${documentId}/chat`, {
+    method: 'POST',
+    body: {
+      question,
+      history,
+      selection: selection ? { text: selection.text, page_number: selection.pageNumber } : null,
+    },
   })
 }

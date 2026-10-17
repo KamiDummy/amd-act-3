@@ -1,5 +1,6 @@
 // Keys for the user's notes, which are saved per document in localStorage as
-// { [key]: { text, updatedAt } }.
+// { [key]: { text, updatedAt } }. A marked passage's note key is also its id in the
+// workspace, for its colour and style and for selecting it.
 
 // A note about the whole document, shown at the top of the Notes tab.
 export const DOCUMENT_NOTE = 'document'
@@ -21,4 +22,8 @@ function hash(text) {
     h = ((h << 5) + h + char.codePointAt(0)) | 0
   }
   return (h >>> 0).toString(36)
+}
+
+export function highlightNoteKey(id) {
+  return `highlight:${id}`
 }
