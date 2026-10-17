@@ -85,9 +85,14 @@ Only federal law is searched, so leases and most employment terms come back with
 
 ### Highlight-to-law (LLM)
 
-`POST /api/documents/{id}/explain` with `{"text": "<selected text>", "page_number": 2}` explains a passage the user selected and cites federal law for it. `page_number` is the page the selection starts on; it picks the right match when the text repeats. The selection may span pages and can be up to 4,000 characters.
+`POST /api/documents/{id}/explain` with `{"text": "<selected text>", "page_number": 2}` checks a passage the user selected for risks and cites federal law for it. `page_number` is the page the selection starts on; it picks the right match when the text repeats. The selection may span pages and can be up to 4,000 characters.
 
-The response has `explanation`, `severity` (`high`, `medium`, `low` or `none`), `citations` (same shape as the loophole scan's) and the selection's `highlight`. It makes two Token Factory calls (one to write a search query, one to explain) and takes about 10 seconds. The ref and citation checks are shared with the loophole scan in `law_citations.py`.
+The response has `explanation` (what the passage means, then whether it is a problem and why), `severity` (`high`, `medium`, `low` or `none`), `recommendation` (empty when the passage is fine), `citations` (same shape as the loophole scan's) and the selection's `highlight`. It makes two Token Factory calls and takes 10 to 30 seconds:
+
+1. The model judges the passage from the signer's side and writes a search query aimed at the legal rule behind its concern (for a five-day vacation clause, "minimum annual vacation for employees", not "vacation days").
+2. After the vector search, the model explains the passage with that concern and the retrieved sections in hand.
+
+Explain and the loophole scan judge clauses by the same criteria and severity scale, kept in `review_criteria.py`, so the same clause gets the same verdict from either. The ref and citation checks are shared in `law_citations.py`.
 
 ### Highlights on the PDF
 
