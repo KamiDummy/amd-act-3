@@ -69,6 +69,38 @@ uv run python -m backend.search_laws "can my landlord enter without notice"
 
 The first search downloads the embedding model (about 130 MB). Use the same model for queries and ingestion; changing it means re-running the ingest with `--force`.
 
+### Loophole scan (LLM)
+
+`POST /api/documents/{id}/loopholes` scans a stored document and returns findings, most severe first. Each finding has a title, a severity (`high`, `medium` or `low`), the clause quoted from the document, the page it was found on (`null` if the model paraphrased), a plain-language explanation and recommendation, and citations to federal law sections, each with its text and a link. The frontend sends only the document id; the backend reads the stored text.
+
+A scan makes two calls to AMD Token Factory (`Gemma-4-31B-IT`), with a vector search in between, and takes about a minute:
+
+1. The model lists up to 8 suspect clauses, each with a search query for its legal topic.
+2. Each query runs against the law database (top 4 sections).
+3. The model reviews each clause against its sections and may cite only those, so a citation can't point at law that isn't in the database.
+
+Set `TOKEN_FACTORY_API_KEY` in `backend/.env` (see `.env.example`). Without it the endpoint returns 503. LLM failures return 502. The team shares one key and its limit of about 20 requests a minute, so avoid running many scans at once.
+
+Only federal law is searched, so leases and most employment terms come back with few or no citations and a note to check provincial law.
+
+### Highlight-to-law (LLM)
+
+`POST /api/documents/{id}/explain` with `{"text": "<selected text>", "page_number": 2}` explains a passage the user selected and cites federal law for it. `page_number` is the page the selection starts on; it picks the right match when the text repeats. The selection may span pages and can be up to 4,000 characters.
+
+The response has `explanation`, `severity` (`high`, `medium`, `low` or `none`), `citations` (same shape as the loophole scan's) and the selection's `highlight`. It makes two Token Factory calls (one to write a search query, one to explain) and takes about 10 seconds. The ref and citation checks are shared with the loophole scan in `law_citations.py`.
+
+### Highlights on the PDF
+
+Every feature that points at a passage in the document returns it as `highlight`, a list of rectangles, one per line of text:
+
+```json
+{"page_number": 2, "x0": 0.1176, "top": 0.1012, "x1": 0.8824, "bottom": 0.1195}
+```
+
+Coordinates are fractions of the page's width and height from its top-left corner, so they work at any zoom: draw each one as a box at `left: x0 * 100%`, `top: top * 100%`, `width: (x1 - x0) * 100%`, `height: (bottom - top) * 100%` over its page. A passage can cover several pages; each rectangle names its own. An empty list means the passage couldn't be matched to the PDF.
+
+`backend/src/backend/highlights.py` does the matching (`locate`), word by word against the stored page text, ignoring case, whitespace and curly quotes, and allowing partial words at the edges and quotes shortened with an ellipsis.
+
 ### 3. Frontend
 
 ```powershell

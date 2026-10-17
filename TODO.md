@@ -13,15 +13,15 @@
 
 - [x] PDF upload endpoint
 - [x] Text extraction (pdfplumber)
-- [ ] Call Token Factory API, get flagged issues back
+- [x] Call Token Factory API, get flagged issues back (loophole scan, cross-referenced with law DB)
 - [ ] Display results in frontend
 
 ### Highlight-to-law search
 
 - [ ] Set up react-pdf-highlighter in frontend
-- [ ] Embedding model in backend (sentence-transformers)
-- [ ] Load 2-3 real statutes into pgvector
-- [ ] Endpoint: selected text → vector search → LLM explains, with citation
+- [x] Embedding model in backend (sentence-transformers)
+- [x] Load federal statutes and regulations into pgvector
+- [x] Endpoint: selected text → vector search → LLM explains, with citation
 
 ### Document Q&A
 
