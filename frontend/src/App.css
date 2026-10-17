@@ -1,90 +1,51 @@
+/* The menu on the left and the open document filling the rest of the screen. */
 .app {
   height: 100svh;
   display: flex;
-  flex-direction: column;
-}
-
-.app-header {
-  height: 56px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bar);
-}
-
-.app-body {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  min-height: 0;
-}
-
-.app-sidebar {
-  border-right: 1px solid var(--border);
-  background: var(--bar);
-  overflow-y: auto;
 }
 
 .app-main {
+  flex: 1;
   min-width: 0;
   overflow-y: auto;
-  padding: 32px;
 }
 
 .upload-screen {
-  padding-top: 24px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12svh 32px 32px;
 }
 
-/* With a document open, the viewer fills the area and scrolls inside itself,
-   so the title and zoom bar stay in view. */
-.app-main.has-viewer {
+/* With a document open, the workspace fills the area and each column scrolls itself. */
+.app-main.has-document {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 20px 24px 24px;
 }
 
 /* Narrower screens put the review panel under the contract, so this area scrolls. */
 @media (max-width: 1100px) {
-  .app-main.has-viewer {
+  .app-main.has-document {
     display: block;
     overflow-y: auto;
   }
 }
 
-/* Phones: the sidebar stacks above the content. */
+/* Phones: the menu stacks above the content. */
 @media (max-width: 768px) {
   .app {
     height: auto;
     min-height: 100svh;
+    flex-direction: column;
   }
 
-  .app-header {
-    padding: 0 16px;
-  }
-
-  .app-body {
-    grid-template-columns: 1fr;
-  }
-
-  .app-sidebar {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    max-height: 40svh;
-  }
-
-  .app-main {
+  .app-main,
+  .app-main.has-document {
     overflow: visible;
-    padding: 20px 16px;
   }
 
-  /* The page grows naturally on phones (the viewer has its own height). */
-  .app-main.has-viewer {
-    overflow: visible;
-    padding: 16px;
+  .upload-screen {
+    padding: 24px 16px;
   }
 }
 

@@ -114,3 +114,13 @@ button.small {
   padding: 4px 10px;
   font-size: 13px;
 }
+
+/* For text only screen readers need, like the app name next to the bare logo mark. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
