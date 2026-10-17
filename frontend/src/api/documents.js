@@ -18,6 +18,12 @@ export async function listDocuments() {
   return documents.map(toDocument)
 }
 
+// The original PDF as a Blob, for the viewer. Goes through the client so the token is
+// attached and an expired session still leads back to the login page.
+export function getDocumentFile(id) {
+  return apiRequest(`/api/documents/${id}/file`, { as: 'blob' })
+}
+
 // Uploads a PDF and returns the stored document. The backend extracts the text, so this
 // can take a second or two on big files. A rejected file (bad PDF, too many pages, scanned,
 // too much text, over 20 MB) throws with a message to show the user.
