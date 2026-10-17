@@ -64,3 +64,17 @@
 .hl-rect.is-active.sev-mine {
   box-shadow: inset 0 -2px 0 var(--mine), 0 0 0 1.5px var(--mine);
 }
+
+/* Marks a highlight the user wrote a note on, like a sticky tab on the page edge. */
+.hl-note-pin {
+  position: absolute;
+  transform: translate(4px, -60%);
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--mine-bg);
+  box-shadow: 0 0 0 1px var(--mine), 0 1px 3px rgba(0, 0, 0, 0.15);
+  color: #5c4a12;
+  font-size: 11px;
+  line-height: 1.3;
+  pointer-events: none;
+}
