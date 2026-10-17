@@ -3,10 +3,11 @@ import './LoopholePanel.css'
 const TABS = [
   { id: 'loopholes', label: 'Loopholes' },
   { id: 'explanations', label: 'Explanations' },
+  { id: 'notes', label: 'Notes' },
 ]
 
 // The right-hand panel: tabs on top, the chosen tab's content, a disclaimer below.
-// counts: { loopholes, explanations } shown next to the tab names (null hides it).
+// counts: { loopholes, explanations, notes } shown next to the tab names (null hides it).
 function ReviewPanel({ tab, onTabChange, counts, children }) {
   return (
     <aside className="lp" aria-label="Review">

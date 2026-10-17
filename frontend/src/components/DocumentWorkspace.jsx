@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { explainSelection, scanLoopholes } from '../api/analysis'
+import { DOCUMENT_NOTE, explanationNoteKey, findingNoteKey } from '../utils/notes'
 import { loadJSON, saveJSON } from '../utils/storage'
 import ExplanationsPanel from './ExplanationsPanel'
 import HighlightRects from './HighlightRects'
 import LoopholePanel from './LoopholePanel'
+import NotesPanel from './NotesPanel'
 import PdfViewer from './PdfViewer'
 import ReviewPanel from './ReviewPanel'
 import SelectionPopover from './SelectionPopover'
@@ -11,6 +13,7 @@ import './DocumentWorkspace.css'
 
 const scanKey = (documentId) => `scan:${documentId}`
 const explanationsKey = (documentId) => `explanations:${documentId}`
+const notesKey = (documentId) => `notes:${documentId}`
 
 // Scans still running, by document id. Kept outside the component so a scan carries
 // on (and gets saved) if the user opens another document, and the workspace picks it
@@ -99,6 +102,9 @@ function DocumentWorkspace({ document: doc }) {
   )
   const [selection, setSelection] = useState(null)
 
+  // The user's notes: { [key]: { text, updatedAt } }, see utils/notes.js
+  const [notes, setNotes] = useState(() => loadJSON(notesKey(doc.id)) ?? {})
+
   useEffect(() => {
     mounted.current = true
     return () => {
@@ -157,6 +163,17 @@ function DocumentWorkspace({ document: doc }) {
     }
   }, [selection])
 
+  // Saves a note right away; an empty text deletes it.
+  function saveNote(key, text) {
+    setNotes((current) => {
+      const next = { ...current }
+      if (text) next[key] = { text, updatedAt: new Date().toISOString() }
+      else delete next[key]
+      saveJSON(notesKey(doc.id), next)
+      return next
+    })
+  }
+
   function handleScan() {
     setScanError(null)
     setNow(Date.now())
@@ -169,7 +186,12 @@ function DocumentWorkspace({ document: doc }) {
   function scrollToRects(rects) {
     const first = rects?.[0]
     if (first) {
-      setScrollTarget({ pageNumber: first.page_number, top: first.top, nonce: Date.now() })
+      // A fresh nonce each time, so clicking the same item again scrolls again.
+      setScrollTarget((previous) => ({
+        pageNumber: first.page_number,
+        top: first.top,
+        nonce: (previous?.nonce ?? 0) + 1,
+      }))
     }
   }
 
@@ -258,6 +280,7 @@ function DocumentWorkspace({ document: doc }) {
   function handleRemoveExplanation(id) {
     setExplanations((items) => items.filter((x) => x.id !== id))
     forgetExplanation(doc.id, id)
+    saveNote(explanationNoteKey(id), '') // Its note goes with it.
     if (activeKey === `e:${id}`) setActiveKey(null)
   }
 
@@ -268,6 +291,7 @@ function DocumentWorkspace({ document: doc }) {
       id: `f:${index}`,
       severity: finding.severity,
       title: finding.title,
+      hasNote: Boolean(notes[findingNoteKey(finding)]),
       rects: finding.highlight,
     })),
     ...explanations
@@ -276,9 +300,43 @@ function DocumentWorkspace({ document: doc }) {
         id: `e:${item.id}`,
         severity: 'mine',
         title: 'Your highlight: click to see the explanation',
+        hasNote: Boolean(notes[explanationNoteKey(item.id)]),
         rects: item.result.highlight,
       })),
   ]
+
+  // Every note on a finding or explanation that still exists, for the Notes tab.
+  const noteEntries = [
+    ...findings.flatMap((finding, index) => {
+      const note = notes[findingNoteKey(finding)]
+      if (!note) return []
+      return [{
+        key: findingNoteKey(finding),
+        kind: 'Loophole',
+        label: finding.title,
+        text: note.text,
+        onShow: () => {
+          setTab('loopholes')
+          selectFinding(index)
+        },
+      }]
+    }),
+    ...explanations.flatMap((item) => {
+      const note = notes[explanationNoteKey(item.id)]
+      if (!note) return []
+      return [{
+        key: explanationNoteKey(item.id),
+        kind: 'Explanation',
+        label: `“${item.text}”`,
+        text: note.text,
+        onShow: () => {
+          setTab('explanations')
+          selectExplanation(item.id)
+        },
+      }]
+    }),
+  ]
+  const noteCount = noteEntries.length + (notes[DOCUMENT_NOTE] ? 1 : 0)
 
   const activeFinding = activeKey?.startsWith('f:') ? Number(activeKey.slice(2)) : null
   const activeExplanation = activeKey?.startsWith('e:') ? activeKey.slice(2) : null
@@ -316,9 +374,10 @@ function DocumentWorkspace({ document: doc }) {
           counts={{
             loopholes: result ? findings.length : null,
             explanations: explanations.length || null,
+            notes: noteCount || null,
           }}
         >
-          {tab === 'loopholes' ? (
+          {tab === 'loopholes' && (
             <LoopholePanel
               scanning={Boolean(scan)}
               elapsedSeconds={scan ? Math.max(0, Math.floor((now - scan.startedAt) / 1000)) : 0}
@@ -327,14 +386,26 @@ function DocumentWorkspace({ document: doc }) {
               activeIndex={activeFinding}
               onSelect={selectFinding}
               onScan={handleScan}
+              notes={notes}
+              onSaveNote={saveNote}
             />
-          ) : (
+          )}
+          {tab === 'explanations' && (
             <ExplanationsPanel
               items={explanations}
               activeId={activeExplanation}
               onSelect={selectExplanation}
               onRemove={handleRemoveExplanation}
               onRetry={handleRetryExplanation}
+              notes={notes}
+              onSaveNote={saveNote}
+            />
+          )}
+          {tab === 'notes' && (
+            <NotesPanel
+              documentNote={notes[DOCUMENT_NOTE]?.text ?? null}
+              onSaveDocumentNote={(text) => saveNote(DOCUMENT_NOTE, text)}
+              entries={noteEntries}
             />
           )}
         </ReviewPanel>
