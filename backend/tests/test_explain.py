@@ -9,7 +9,10 @@ from backend.llm import LlmError, get_llm
 from backend.main import app
 from conftest import FakeLlm, law_hit
 
-QUERY = {"law_query": "overtime pay for employees"}
+QUERY = {
+    "concern": "Extra hours may go unpaid.",
+    "law_query": "overtime pay for employees",
+}
 
 
 @pytest.fixture
@@ -54,7 +57,12 @@ def test_explain_returns_explanation_citations_and_highlight(client, document, s
     llm = use_llm(
         FakeLlm(
             QUERY,
-            {"explanation": "It means X.", "severity": "medium", "citations": ["L2", "L9"]},
+            {
+                "explanation": "It means X.",
+                "severity": "medium",
+                "recommendation": "Ask for overtime pay.",
+                "citations": ["L2", "L9"],
+            },
         )
     )
 
@@ -65,6 +73,7 @@ def test_explain_returns_explanation_citations_and_highlight(client, document, s
     assert body["model"] == "fake-model"
     assert body["explanation"] == "It means X."
     assert body["severity"] == "medium"
+    assert body["recommendation"] == "Ask for overtime pay."
     assert [c["section"] for c in body["citations"]] == ["230"]  # L9 was never shown.
     assert {rect["page_number"] for rect in body["highlight"]} == {1}
     assert searches == ["overtime pay for employees"]
@@ -73,6 +82,22 @@ def test_explain_returns_explanation_citations_and_highlight(client, document, s
         assert f"<selection>\n{selection}\n</selection>" in prompt
         assert "[Page 1]" in prompt and "[Page 2]" not in prompt
     assert '"ref": "L1"' in llm.prompts[1][1]
+    # The first call's concern is passed on to the explanation.
+    assert "<concern>\nExtra hours may go unpaid.\n</concern>" in llm.prompts[1][1]
+
+
+def test_query_without_concern_and_explanation_without_recommendation(
+    client, document, searches
+):
+    llm = use_llm(
+        FakeLlm({"law_query": "vacation pay"}, {"explanation": "Fair.", "severity": "none"})
+    )
+
+    body = ask(client, document["id"], "vacation", page_number=1).json()
+
+    assert body["recommendation"] == ""
+    assert searches == ["vacation pay"]
+    assert "<concern>\n\n</concern>" in llm.prompts[1][1]
 
 
 def test_selection_across_pages_highlights_both_and_gives_both_as_context(
