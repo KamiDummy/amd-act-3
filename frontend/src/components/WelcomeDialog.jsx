@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { APP_NAME } from '../config'
+import { LogoMark } from './Logo'
 import './WelcomeDialog.css'
 
 // "employment-agreement.pdf" → "Employment agreement"
@@ -35,6 +36,7 @@ function WelcomeDialog({ demos, onOpenDemo, onUpload, onClose }) {
       onClick={(event) => event.target === ref.current && onClose()}
     >
       <div className="welcome-body">
+        <LogoMark size={44} />
         <h2 id="welcome-title" className="welcome-title">
           Welcome to {APP_NAME}
         </h2>
