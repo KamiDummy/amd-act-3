@@ -166,3 +166,7 @@ frontend/      React app, and the Caddy config that serves it in production
 docs/          API reference and deployment guide
 compose.yaml   production setup: the backend and the web server
 ```
+
+## License
+
+The code is under the [MIT License](LICENSE). The law loaded into the database keeps its sources' terms: federal law from Justice Laws under the Open Government Licence – Canada, and Ontario law from e-Laws.
