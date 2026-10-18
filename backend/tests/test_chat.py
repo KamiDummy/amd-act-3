@@ -306,6 +306,21 @@ def test_scan_actions_and_notes(client, document, searches):
     assert (created["type"], created["scan"], created["description"]) == ("create_highlight", True, "Mine")
     assert scanned == {"type": "scan_item", "id": "highlight:n"}
     assert updated == {"type": "update_item", "id": "highlight:n", "name": None, "description": "New note"}
-    # The model sees the note as "note" and each item's kind.
-    assert '"note": "Check the math"' in llm.prompts[1][1]
-    assert '"kind": "auto"' in llm.prompts[1][1]
+    # The model sees the user's note as "note", and every item as a type of highlight:
+    # an unscanned one is a plain "highlight", never a "note".
+    prompt = llm.prompts[1][1]
+    assert '"note": "Check the math"' in prompt
+    assert '"type": "highlight"' in prompt and '"type": "auto-scan finding"' in prompt
+    assert '"kind"' not in prompt
+
+
+def test_conversation_comes_after_the_items(client, document, searches):
+    llm = use_llm(FakeLlm(NO_LAW, {"answer": "Done."}))
+    history = [{"role": "user", "content": "do the math"}, {"role": "assistant", "content": "It's off."}]
+
+    ask(client, document["id"], "make it a highlight", history=history, items=KINDS)
+
+    # What the user just said sits nearest the question, after the items.
+    prompt = llm.prompts[1][1]
+    order = [prompt.index(tag) for tag in ("<document>", "<items>", "<conversation>", "<question>")]
+    assert order == sorted(order)
