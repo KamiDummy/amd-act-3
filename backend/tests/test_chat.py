@@ -75,6 +75,7 @@ def test_answer_with_references_and_citations(client, document, searches):
     assert {rect["page_number"] for rect in body["references"][0]["highlight"]} == {2}
     assert [c["section"] for c in body["citations"]] == ["230"]  # L9 was never shown.
     assert searches == ["overtime pay for employees"]
+    assert body["law_query"] == "overtime pay for employees"
     # Both calls get the whole document and the question; only the answer gets law.
     for _, prompt in llm.prompts:
         assert "[Page 1]" in prompt and "[Page 2]" in prompt
@@ -90,6 +91,7 @@ def test_question_without_law_skips_the_search(client, document, searches):
 
     assert body["answer"] == "It starts on May 1."
     assert body["references"] == [] and body["citations"] == []
+    assert body["law_query"] == ""
     assert searches == []
     assert "<candidate_law>" not in llm.prompts[1][1]
 
