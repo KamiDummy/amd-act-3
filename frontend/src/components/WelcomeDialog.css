@@ -43,7 +43,7 @@
 
 /* The same serif voice as the login page's headline. */
 .welcome-title {
-  margin: 0 32px 0 0;
+  margin: 4px 32px 0 0;
   font: 400 26px/1.2 var(--serif);
   letter-spacing: -0.01em;
 }

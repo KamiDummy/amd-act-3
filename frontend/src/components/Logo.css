@@ -9,21 +9,35 @@
 }
 
 .logo-mark {
-  position: relative;
   flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  background: var(--text-h);
+  display: block;
 }
 
-.logo-mark::after {
-  content: '';
-  position: absolute;
-  left: 5px;
-  right: 5px;
-  bottom: 5px;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--high-bg);
+/* The brand colours from docs/logo. */
+.logo-page {
+  fill: #1d1c1a;
+}
+
+.logo-line {
+  fill: #f3f1ec;
+  fill-opacity: 0.3;
+}
+
+.logo-highlight {
+  fill: #ffd2c2;
+}
+
+.logo-flagged {
+  fill: #c25237;
+}
+
+/* Dark mode uses the light page of docs/logo/notalawyer-logo-dark.svg. */
+@media (prefers-color-scheme: dark) {
+  .logo-page {
+    fill: #f3f1ec;
+  }
+
+  .logo-line {
+    fill: #1d1c1a;
+  }
 }

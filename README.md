@@ -1,4 +1,9 @@
-# NotALawyer
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/logo/notalawyer-logo-dark.svg">
+    <img src="docs/logo/notalawyer-logo.svg" alt="NotALawyer" height="56">
+  </picture>
+</h1>
 
 **Read the fine print before you sign.** Upload a contract and NotALawyer flags the clauses that work against you, explains them in plain language, and links each one to the exact section of Canadian law it runs into.
 
