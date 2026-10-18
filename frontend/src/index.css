@@ -1,20 +1,20 @@
-/* NotALawyer look: warm "paper" colours, a serif for documents and headings,
-   a clean sans for the interface. Components only use these variables. */
+/* NotALawyer look: the logo's navy ink on cool paper white, a serif for documents and
+   headings, a clean sans for the interface. Components only use these variables. */
 :root {
-  --text: #4a4740;
-  --text-h: #1d1c1a;
-  --text-muted: #6b675f;
-  --bg: #f3f1ec;
-  --surface: #fffefb;
-  --bar: #fbfaf7;
-  --well: #e4e1d9;
-  --border: rgba(29, 28, 26, 0.12);
-  --accent: #1d1c1a;
-  --accent-hover: #3a3833;
-  --accent-soft: #ece9e2;
-  --on-accent: #f7f5f0;
+  --text: #3a4456;
+  --text-h: #0e1a2b;
+  --text-muted: #5d697b;
+  --bg: #eef2f7;
+  --surface: #ffffff;
+  --bar: #f7f9fc;
+  --well: #dde3ec;
+  --border: rgba(14, 26, 43, 0.12);
+  --accent: #0e1a2b;
+  --accent-hover: #23324a;
+  --accent-soft: #e3e9f1;
+  --on-accent: #f5f7fa;
   --danger: #b3402a;
-  --shadow: 0 1px 2px rgba(40, 35, 25, 0.06), 0 8px 24px rgba(40, 35, 25, 0.08);
+  --shadow: 0 1px 2px rgba(14, 26, 43, 0.06), 0 8px 24px rgba(14, 26, 43, 0.08);
 
   /* Highlight colours for the review workspace: high risk, negotiate, mine, cited. */
   --high: oklch(0.58 0.15 35);
@@ -59,21 +59,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Dark mode keeps the same warm feel: dark paper with light ink. */
+/* Dark mode turns it over: deep navy paper with light ink. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #c9c4b8;
-    --text-h: #f3f1ec;
-    --text-muted: #9a9488;
-    --bg: #161513;
-    --surface: #1f1e1b;
-    --bar: #1b1a18;
-    --well: #121110;
-    --border: rgba(243, 241, 236, 0.12);
-    --accent: #f3f1ec;
-    --accent-hover: #d9d5cb;
-    --accent-soft: rgba(243, 241, 236, 0.08);
-    --on-accent: #1d1c1a;
+    --text: #c2cad7;
+    --text-h: #eef2f7;
+    --text-muted: #8a95a7;
+    --bg: #0b1320;
+    --surface: #131d2d;
+    --bar: #0f1826;
+    --well: #070d17;
+    --border: rgba(238, 242, 247, 0.12);
+    --accent: #eef2f7;
+    --accent-hover: #d0d8e4;
+    --accent-soft: rgba(238, 242, 247, 0.08);
+    --on-accent: #0e1a2b;
     --danger: #f08c74;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
     --demo: oklch(0.76 0.17 150);
