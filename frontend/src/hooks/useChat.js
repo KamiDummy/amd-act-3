@@ -24,7 +24,8 @@ function toHistory(message) {
 
 // The document's chat, saved on this device. Messages, oldest first:
 //   { id, role: 'user', content, selection: { text, pageNumber } | null, createdAt }
-//   { id, role: 'assistant', content, references, citations, mentions, actions, replyTo, createdAt }
+//   { id, role: 'assistant', content, references, citations, lawQuery, mentions, actions,
+//     replyTo, createdAt }
 // mentions are the keys of the user's items the answer is about; actions are the changes
 // the chat made to them (see askChat). pending: the question waiting for an answer,
 // { id, status: 'loading' | 'error', error }.
@@ -64,6 +65,7 @@ export function useChat(documentId, { getItems, onAnswer }) {
         content: response.answer,
         references: response.references,
         citations: response.citations,
+        lawQuery: response.law_query ?? '',
         mentions: response.mentions ?? [],
         actions: response.actions ?? [],
         replyTo: question.id,
