@@ -13,6 +13,9 @@ def test_federal_sections_link_to_their_own_page():
         == "https://laws-lois.justice.gc.ca/eng/acts/L-2/section-184.01.html"
     )
     assert section_url(law, LawSection(label="")) == FEDERAL
+    # A grouped label links to its first section; a label without a number to the law.
+    assert section_url(law, LawSection(label="31 and 32")).endswith("/section-31.html")
+    assert section_url(law, LawSection(label="Canada–Korea Convention")) == FEDERAL
 
 
 def test_ontario_sections_link_to_their_anchor():

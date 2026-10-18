@@ -6,6 +6,7 @@ here. Ontario statutes come from e-Laws, parsed in ontario_laws.py. Both are sto
 and searched the same way.
 """
 
+import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from functools import lru_cache
@@ -20,6 +21,8 @@ from backend.models import EMBEDDING_DIM, Law, LawSection
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 # bge models embed queries with this prefix; passages get none.
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
+# A section number as Justice Laws uses it in its section pages, e.g. "184" or "490.02908".
+SECTION_NUMBER = re.compile(r"\d+(?:\.\d+)*")
 MAX_CHUNK_CHARS = 1800
 MIN_SECTION_CHARS = 20
 LINE_BREAK_AFTER = {"Paragraph", "Subparagraph", "Definition", "Subsection", "Text"}
@@ -66,11 +69,14 @@ class LawHit:
 
 def section_url(law: Law, section: LawSection) -> str:
     """The section's own page (Justice Laws has one per section), its anchor on the
-    law's page (e-Laws), or the law's page when neither is known."""
+    law's page (e-Laws), or the law's page when neither is known. A grouped label such
+    as "31 and 32" links to its first section; one without a number (a schedule) to
+    the law."""
     if section.anchor:
         return f"{law.url}#{section.anchor}"
-    if law.jurisdiction == "federal" and section.label and law.url.endswith("/index.html"):
-        return law.url.removesuffix("index.html") + f"section-{section.label}.html"
+    number = SECTION_NUMBER.match(section.label or "")
+    if law.jurisdiction == "federal" and number and law.url.endswith("/index.html"):
+        return law.url.removesuffix("index.html") + f"section-{number.group()}.html"
     return law.url
 
 
