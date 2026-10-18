@@ -16,7 +16,6 @@ function Sidebar({
   onRetry,
   selectedId,
   onSelect,
-  onRemove,
   onNew,
   onSignOut,
 }) {
@@ -62,15 +61,6 @@ function Sidebar({
                     {doc.isSample && ' · Demo'}
                   </span>
                 </span>
-              </button>
-              <button
-                type="button"
-                className="sb-doc-remove"
-                onClick={() => onRemove(doc.id)}
-                aria-label={`Remove ${doc.name}`}
-                title="Remove"
-              >
-                ×
               </button>
             </li>
           )
