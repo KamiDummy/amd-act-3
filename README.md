@@ -111,13 +111,16 @@ Explain and the loophole scan judge clauses by the same criteria and severity sc
 {
   "question": "Can they fire me without notice?",
   "history": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}],
-  "selection": {"text": "<selected text>", "page_number": 2}
+  "selection": {"text": "<selected text>", "page_number": 2},
+  "items": [{"id": "highlight:…", "kind": "highlight", "name": "Vacation days", "description": "", "quote": "five (5) days", "page_number": 1, "severity": null}]
 }
 ```
 
 `history` is the conversation so far, oldest first. The server keeps no chat state, so the client stores the conversation and sends it with each question; only the last 20 messages are used. `selection` is optional: a passage the user attached to the question. Questions are up to 2,000 characters, history messages up to 8,000.
 
-The response has `answer`, `references` and `citations` (same shape as the loophole scan's). Each reference is a passage of the document the answer relies on, with its `quote`, `page_number` and `highlight`, so the client can link it to its place in the PDF. Quotes that can't be found in the document are dropped. It makes two Token Factory calls and takes 10 to 30 seconds:
+`items` is optional: the user's risks and highlights on the document, so the chat can find, list and change them. The model sees them under short refs (`I1`, `I2`, …); only the first 200 are used.
+
+The response has `answer`, `references`, `citations` (same shape as the loophole scan's), `mentions` and `actions`. Each reference is a passage of the document the answer relies on, with its `quote`, `page_number` and `highlight`, so the client can link it to its place in the PDF. Quotes that can't be found in the document are dropped. `mentions` lists the ids of the items the answer is about. `actions` are the changes the user asked for, checked in `chat_items.py` before they are returned: `{"type": "create_highlight", "name", "description", "quote", "page_number", "highlight"}` for a passage found in the document, or `{"type": "update_item", "id", "name", "description"}` for an item that was sent (a `null` field stays as it is). The client applies them. It makes two Token Factory calls and takes 10 to 30 seconds:
 
 1. The model reads the document and the conversation and decides whether the question needs law. If so, it writes a search query.
 2. After the vector search (skipped when no law is needed), the model answers, quoting the document and citing only the sections retrieved for this question.
