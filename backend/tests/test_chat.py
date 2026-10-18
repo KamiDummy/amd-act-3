@@ -192,3 +192,83 @@ def test_requires_token_when_gate_on(client, monkeypatch):
     monkeypatch.setattr(settings, "access_code", SecretStr("secret"))
 
     assert ask(client, uuid.uuid4(), "overtime?").status_code == 401
+
+
+ITEMS = [
+    {"id": "highlight:a", "kind": "highlight", "name": "Vacation days", "quote": "five days"},
+    {
+        "id": "finding:b",
+        "kind": "risk",
+        "name": "Unpaid overtime",
+        "description": "Ask about this",
+        "quote": "not entitled to overtime",
+        "page_number": 1,
+        "severity": "high",
+    },
+]
+
+
+def test_items_are_shown_under_refs_and_mentions_map_back(client, document, searches):
+    llm = use_llm(
+        FakeLlm(NO_LAW, {"answer": "You have two.", "mentions": ["I2", "I1", "I9", "highlight:a", 3]})
+    )
+
+    body = ask(client, document["id"], "List my highlights", items=ITEMS).json()
+
+    # Unknown refs and repeats are dropped; an id given directly is accepted.
+    assert body["mentions"] == ["finding:b", "highlight:a"]
+    for _, prompt in llm.prompts:
+        assert "<items>" in prompt and '"ref": "I2"' in prompt and "Ask about this" in prompt
+        assert "finding:b" not in prompt  # The model sees refs, not the client's ids.
+
+
+def test_actions_are_checked_before_they_reach_the_client(client, document, searches):
+    quote = passage(document, 2)
+    use_llm(
+        FakeLlm(
+            NO_LAW,
+            {
+                "answer": "Done.",
+                "actions": [
+                    {"type": "create_highlight", "quote": quote, "name": "Overtime", "description": "Check"},
+                    {"type": "create_highlight", "quote": "words the document does not have"},
+                    {"type": "update_item", "item": "I1", "name": "Vacation below minimum"},
+                    {"type": "update_item", "item": "I9", "name": "Nobody"},
+                    {"type": "update_item", "item": "I2"},
+                    {"type": "delete_item", "item": "I2"},
+                    "not an action",
+                ],
+            },
+        )
+    )
+
+    body = ask(client, document["id"], "Save the overtime clause", items=ITEMS).json()
+
+    created, updated = body["actions"]
+    assert created["type"] == "create_highlight"
+    assert (created["name"], created["description"], created["quote"]) == ("Overtime", "Check", quote)
+    assert created["page_number"] == 2
+    assert {rect["page_number"] for rect in created["highlight"]} == {2}
+    assert updated == {
+        "type": "update_item",
+        "id": "highlight:a",
+        "name": "Vacation below minimum",
+        "description": None,
+    }
+
+
+def test_without_items_the_prompt_has_none(client, document, searches):
+    llm = use_llm(FakeLlm(NO_LAW, {"answer": "Yes."}))
+
+    body = ask(client, document["id"], "Is this fair?").json()
+
+    assert body["mentions"] == [] and body["actions"] == []
+    assert "<items>" not in llm.prompts[1][1]
+
+
+def test_invalid_item_is_422(client, document):
+    use_llm(FakeLlm())
+
+    response = ask(client, document["id"], "ok", items=[{"id": "x", "kind": "note"}])
+
+    assert response.status_code == 422
