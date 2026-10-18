@@ -13,31 +13,31 @@
   display: block;
 }
 
-/* The brand colours from docs/logo. */
+/* The brand colours from docs/logo/notalawyer-mark.svg. */
 .logo-page {
-  fill: #1d1c1a;
+  fill: #0e1a2b;
 }
 
 .logo-line {
-  fill: #f3f1ec;
+  fill: #eef2f7;
   fill-opacity: 0.3;
 }
 
 .logo-highlight {
-  fill: #ffd2c2;
+  fill: #ffd43b;
 }
 
 .logo-flagged {
-  fill: #c25237;
+  fill: #0e1a2b;
 }
 
-/* Dark mode uses the light page of docs/logo/notalawyer-logo-dark.svg. */
+/* Dark mode uses docs/logo/notalawyer-mark-dark.svg: a light page, dark lines. */
 @media (prefers-color-scheme: dark) {
   .logo-page {
-    fill: #f3f1ec;
+    fill: #eef2f7;
   }
 
   .logo-line {
-    fill: #1d1c1a;
+    fill: #0e1a2b;
   }
 }
