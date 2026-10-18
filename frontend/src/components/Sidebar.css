@@ -118,7 +118,7 @@
 
 .sb-doc.is-selected {
   background: var(--surface);
-  box-shadow: 0 0 0 1px var(--border), 0 1px 3px rgba(14, 26, 43, 0.06);
+  box-shadow: 0 0 0 1px var(--border), 0 1px 3px rgba(40, 35, 25, 0.06);
 }
 
 /* Reset the global button look: list items are plain rows. */

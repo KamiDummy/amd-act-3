@@ -9,7 +9,7 @@
 }
 
 .welcome::backdrop {
-  background: rgba(8, 14, 24, 0.5);
+  background: rgba(20, 18, 15, 0.45);
 }
 
 .welcome-body {
