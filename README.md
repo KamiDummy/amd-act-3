@@ -108,12 +108,12 @@ Documents are shared by everyone who logs in. Highlights, notes, scan results an
 
 ## Law database
 
-| Law | Laws | Sections | Source |
+The search runs over every section of the loaded law, stored one by one (long sections in parts), and each citation links to one of them.
+
+| Jurisdiction | Laws loaded | Sections searched | Source |
 | --- | --- | --- | --- |
-| Federal Acts | 895 | 55,446 | [Justice Laws XML](https://github.com/justicecanada/laws-lois-xml), Open Government Licence – Canada |
-| Federal regulations | 2,429 | 48,215 | the same |
-| Ontario statutes | 21 | 3,637 | [e-Laws](https://www.ontario.ca/laws), Ontario's official consolidated law |
-| Ontario regulations | 3 | 317 | the same |
+| Federal | 895 Acts and 2,429 regulations | 103,661 | [Justice Laws XML](https://github.com/justicecanada/laws-lois-xml), under the Open Government Licence – Canada |
+| Ontario | 21 statutes and 3 regulations | 3,954 | [e-Laws](https://www.ontario.ca/laws), Ontario's official consolidated law |
 
 - **Ontario** covers the laws behind everyday contracts: jobs (Employment Standards Act, Human Rights Code), homes (Residential Tenancies Act, Condominium Act), buying and borrowing (Consumer Protection Act, Payday Loans Act, Sale of Goods Act, and more), and any contract (Limitations Act). The full list is `LAWS` in [`ontario_laws.py`](backend/src/backend/ontario_laws.py).
 - **Federal** regulations from 1987 to 1999 (about 940) didn't fit under the size cap; everything from 2000 on is loaded.
@@ -153,39 +153,11 @@ After changing [`models.py`](backend/src/backend/models.py), create a migration 
 
 The [API reference](docs/api.md) explains each endpoint and how the scan, passage check and chat work.
 
-### Project structure
+### Project layout
 
 ```text
-backend/
-  src/backend/
-    main.py              FastAPI app
-    auth.py              access code and login tokens
-    documents.py         upload, PDF storage, text extraction (pdf_text.py)
-    loopholes.py         auto scan
-    explain.py           scan of a selected passage
-    chat.py              document chat; chat_items.py checks the changes it asks for
-    review_criteria.py   prompt wording the three share
-    laws.py              law parsing, embeddings and vector search
-    law_citations.py     limits citations to the sections retrieved
-    highlights.py        finds quoted text on the PDF's pages
-    llm.py               AMD Token Factory client
-    ingest_laws.py       loads federal law
-    ontario_laws.py      loads Ontario law
-    seed.py              loads the demo contracts
-  Dockerfile
-  migrations/            Alembic migrations
-  sample_documents/      demo contracts (fictional)
-  tests/
-frontend/
-  src/
-    api/                 backend client
-    components/          sidebar, PDF viewer, highlights list, chat
-    hooks/               scan, highlights and chat state, saved in the browser
-    utils/
-  Caddyfile              web server: HTTPS, the app, and the API passed to the backend
-  Dockerfile
-docs/
-  api.md                 API reference
-  deployment.md          running it on a server
-compose.yaml             production: backend and web server
+backend/       FastAPI app, law loaders, migrations, tests and the demo contracts
+frontend/      React app, and the Caddy config that serves it in production
+docs/          API reference and deployment guide
+compose.yaml   production setup: the backend and the web server
 ```
