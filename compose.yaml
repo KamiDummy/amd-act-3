@@ -1,0 +1,40 @@
+# Production: the app on DOMAIN over HTTPS. See docs/deployment.md.
+#   DOMAIN=example.com docker compose up -d --build
+name: notalawyer
+
+services:
+  backend:
+    build: ./backend
+    env_file: ./backend/.env
+    volumes:
+      - storage:/app/storage
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
+  web:
+    build: ./frontend
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN to the site's domain name}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  # Uploaded PDFs.
+  storage:
+  # Caddy's certificates; keep them, or Let's Encrypt's rate limits apply on rebuilds.
+  caddy_data:
+  caddy_config:
