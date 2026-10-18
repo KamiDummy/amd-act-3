@@ -1,0 +1,132 @@
+.welcome {
+  width: min(480px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.welcome::backdrop {
+  background: rgba(20, 18, 15, 0.45);
+}
+
+.welcome-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 28px;
+}
+
+.welcome-close,
+.welcome-close:hover:not(:disabled) {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.welcome-close:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--text-h);
+}
+
+/* The same serif voice as the login page's headline. */
+.welcome-title {
+  margin: 0 32px 0 0;
+  font: 400 26px/1.2 var(--serif);
+  letter-spacing: -0.01em;
+}
+
+.welcome-text,
+.welcome-lead {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.welcome-text strong,
+.welcome-lead strong {
+  color: var(--text-h);
+}
+
+.welcome-demos {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.welcome-demo,
+.welcome-demo:hover:not(:disabled) {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bar);
+  color: var(--text-h);
+  font-weight: 500;
+  text-align: left;
+}
+
+.welcome-demo:hover:not(:disabled) {
+  border-color: var(--demo);
+  box-shadow: 0 0 0 1px var(--demo);
+}
+
+/* The sidebar's little sheet of paper, ringed in the demo colour. */
+.welcome-thumb {
+  flex: none;
+  width: 22px;
+  height: 28px;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 3px, var(--border) 3px 4px) content-box,
+    var(--surface);
+  padding: 6px 4px;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 1.5px var(--demo);
+}
+
+.welcome-demo-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.welcome-demo-name {
+  font-size: 14px;
+}
+
+.welcome-demo-meta {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.welcome-upload {
+  margin-top: 4px;
+}
+
+.welcome-note {
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
