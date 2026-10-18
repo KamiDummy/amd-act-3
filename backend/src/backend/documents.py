@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from backend.config import settings
 from backend.database import get_db
@@ -81,7 +81,8 @@ def create_document(
 
 
 def get_document_or_404(db: Session, document_id: uuid.UUID) -> Document:
-    document = db.get(Document, document_id)
+    # Pages are loaded now, so a feature can release the connection and still read them.
+    document = db.get(Document, document_id, options=[selectinload(Document.pages)])
     if document is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Document not found.")
     return document

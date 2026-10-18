@@ -31,7 +31,8 @@ def db() -> Session:
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
     )
     Base.metadata.create_all(engine)
-    with sessionmaker(bind=engine)() as session:
+    # Configured like the app's sessions (database.SessionLocal).
+    with sessionmaker(bind=engine, expire_on_commit=False)() as session:
         yield session
     engine.dispose()
 
@@ -79,12 +80,17 @@ class FakeLlm:
 
     model = "fake-model"
 
-    def __init__(self, *replies):
+    def __init__(self, *replies, session: Session | None = None):
         self.replies = list(replies)
         self.prompts: list[tuple[str, str]] = []
+        # Given the request's session, records whether a transaction was open at each call.
+        self.session = session
+        self.open_transactions: list[bool] = []
 
     def complete_json(self, system: str, user: str, *, max_tokens: int):
         self.prompts.append((system, user))
+        if self.session is not None:
+            self.open_transactions.append(self.session.in_transaction())
         reply = self.replies.pop(0)
         if isinstance(reply, Exception):
             raise reply

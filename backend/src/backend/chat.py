@@ -23,7 +23,7 @@ from pydantic import BaseModel, StringConstraints, ValidationError
 from sqlalchemy.orm import Session
 
 from backend.chat_items import ITEMS_GUIDE, ChatAction, ChatItem, ItemRefs, check_actions
-from backend.database import get_db
+from backend.database import get_db, release_connection
 from backend.documents import get_document_or_404, pdf_path
 from backend.highlights import HighlightRect, locate
 from backend.law_citations import Citation, LawRefs
@@ -206,6 +206,7 @@ def answer_question(
     items = ItemRefs(request.items)
     prompt = build_prompt(document, request, items)
 
+    release_connection(db)
     data = llm.complete_json(PLAN_SYSTEM, prompt, max_tokens=PLAN_MAX_TOKENS)
     try:
         law_query = ChatPlan.model_validate(data).law_query.strip()
@@ -213,6 +214,7 @@ def answer_question(
         raise LlmError("The language model returned a plan in the wrong format.") from exc
 
     hits: list[LawHit] = search_laws(db, law_query, LAWS_PER_QUESTION) if law_query else []
+    release_connection(db)
     refs = LawRefs([hits])
     if hits:
         prompt += (

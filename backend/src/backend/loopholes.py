@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
+from backend.database import get_db, release_connection
 from backend.documents import get_document_or_404, pdf_path
 from backend.highlights import HighlightRect, locate
 from backend.law_citations import Citation, LawRefs
@@ -185,11 +185,13 @@ def review_issues(
 
 def scan_document(db: Session, llm: LlmClient, document: Document) -> list[Finding]:
     """Runs the full scan. Raises LlmError when the model fails or misbehaves."""
+    release_connection(db)
     issues = find_issues(llm, document)
     if not issues:
         return []
 
     candidates = [search_laws(db, issue.law_query, LAWS_PER_ISSUE) for issue in issues]
+    release_connection(db)
     refs = LawRefs(candidates)
 
     highlights = locate(document, pdf_path(document.id), [i.quote for i in issues])
