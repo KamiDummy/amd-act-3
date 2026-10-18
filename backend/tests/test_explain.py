@@ -58,6 +58,7 @@ def test_explain_returns_explanation_citations_and_highlight(client, document, s
         FakeLlm(
             QUERY,
             {
+                "title": " Unpaid overtime ",
                 "explanation": "It means X.",
                 "severity": "medium",
                 "recommendation": "Ask for overtime pay.",
@@ -74,6 +75,7 @@ def test_explain_returns_explanation_citations_and_highlight(client, document, s
     assert body["explanation"] == "It means X."
     assert body["severity"] == "medium"
     assert body["recommendation"] == "Ask for overtime pay."
+    assert body["title"] == "Unpaid overtime"
     assert [c["section"] for c in body["citations"]] == ["230"]  # L9 was never shown.
     assert {rect["page_number"] for rect in body["highlight"]} == {1}
     assert searches == ["overtime pay for employees"]
@@ -96,6 +98,7 @@ def test_query_without_concern_and_explanation_without_recommendation(
     body = ask(client, document["id"], "vacation", page_number=1).json()
 
     assert body["recommendation"] == ""
+    assert body["title"] == ""
     assert searches == ["vacation pay"]
     assert "<concern>\n\n</concern>" in llm.prompts[1][1]
 
