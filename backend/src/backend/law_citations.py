@@ -14,9 +14,12 @@ class Citation(BaseModel):
     law_id: str
     law_title: str
     kind: str
+    # "federal" or a province, e.g. "ontario".
+    jurisdiction: str
     section: str
     marginal_note: str | None
     text: str
+    # A link to the section itself where the site allows it, else to the law.
     url: str
 
 
@@ -35,6 +38,7 @@ class LawRefs:
             {
                 "ref": self._refs[hit.section_id],
                 "law": hit.law_title,
+                "jurisdiction": "Canada (federal)" if hit.jurisdiction == "federal" else hit.jurisdiction.title(),
                 "section": hit.label,
                 "note": hit.marginal_note,
                 "text": hit.text,
@@ -55,6 +59,7 @@ def _citation(hit: LawHit) -> Citation:
         law_id=hit.law_id,
         law_title=hit.law_title,
         kind=hit.kind,
+        jurisdiction=hit.jurisdiction,
         section=hit.label,
         marginal_note=hit.marginal_note,
         text=hit.text,

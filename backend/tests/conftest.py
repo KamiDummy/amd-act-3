@@ -97,9 +97,10 @@ def law_hit(section_id: int, label: str = "174") -> LawHit:
         law_id="L-2",
         law_title="Canada Labour Code",
         kind="act",
+        jurisdiction="federal",
         label=label,
         marginal_note="Overtime",
         text=f"Section {label} text.",
-        url="https://laws-lois.justice.gc.ca/eng/acts/L-2/index.html",
+        url=f"https://laws-lois.justice.gc.ca/eng/acts/L-2/section-{label}.html",
         score=0.8,
     )
