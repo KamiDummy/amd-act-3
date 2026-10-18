@@ -28,6 +28,10 @@
   --low: oklch(0.58 0.06 250);
   --low-bg: oklch(0.93 0.025 250);
 
+  /* Demo documents: bright and unlike any risk colour, so new visitors spot them. */
+  --demo: oklch(0.56 0.16 150);
+  --on-demo: #ffffff;
+
   /* Highlighter palette: a stroke colour and a fill for each pen. Pages are white
      paper in both themes, so these don't change in dark mode. */
   --pen-yellow: oklch(0.66 0.13 85);
@@ -72,6 +76,8 @@
     --on-accent: #1d1c1a;
     --danger: #f08c74;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    --demo: oklch(0.76 0.17 150);
+    --on-demo: #0f1a12;
   }
 }
 
@@ -128,6 +134,20 @@ button.secondary:hover:not(:disabled) {
 button.small {
   padding: 4px 10px;
   font-size: 13px;
+}
+
+/* Marks the demo documents: a bright filled label, in capitals, that new visitors can't miss. */
+.demo-tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--demo);
+  color: var(--on-demo);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  text-transform: uppercase;
 }
 
 /* For text only screen readers need, like the app name next to the bare logo mark. */

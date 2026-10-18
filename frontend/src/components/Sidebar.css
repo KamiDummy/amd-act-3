@@ -174,7 +174,15 @@
   display: none;
 }
 
+.sb-doc-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .sb-doc-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -183,14 +191,15 @@
   font-weight: 500;
 }
 
+/* Collapsed, the tag is hidden with the name, so the demo's page gets its colour. */
+.is-collapsed .sb-doc.is-demo .sb-thumb {
+  box-shadow: 0 0 0 2px var(--demo);
+}
+
 .sb-doc-meta {
   font-size: 12px;
   color: var(--text-muted);
 }
-
-
-
-
 
 .sb-bottom {
   display: flex;
