@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, StringConstraints, ValidationError
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
+from backend.database import get_db, release_connection
 from backend.documents import get_document_or_404, pdf_path
 from backend.highlights import HighlightRect, locate
 from backend.law_citations import Citation, LawRefs
@@ -145,6 +145,7 @@ def explain_selection(
         f"<context>\n{context_text(document, pages)}\n</context>"
     )
 
+    release_connection(db)
     data = llm.complete_json(QUERY_SYSTEM, prompt, max_tokens=QUERY_MAX_TOKENS)
     try:
         query = LawQuery.model_validate(data)
@@ -152,6 +153,7 @@ def explain_selection(
         raise LlmError("The language model returned a search query in the wrong format.") from exc
 
     hits = search_laws(db, query.law_query, LAWS_PER_SELECTION)
+    release_connection(db)
     refs = LawRefs([hits])
     data = llm.complete_json(
         EXPLAIN_SYSTEM,
