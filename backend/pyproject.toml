@@ -19,6 +19,8 @@ dependencies = [
     "python-multipart>=0.0.32",
     "sentence-transformers>=6.1.0",
     "sqlalchemy>=2.1.4",
+    # Listed directly, though sentence-transformers needs it, so the CPU index below applies.
+    "torch>=2.14.1",
     "uvicorn[standard]>=0.54.0",
 ]
 
@@ -31,6 +33,16 @@ dev = [
     "httpx2>=2.13.1",
     "pytest>=9.1.1",
 ]
+
+# CPU-only PyTorch on every platform. The embedding model is small, and PyPI's Linux
+# wheels bring about 3 GB of CUDA libraries that a server without a GPU can't use.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
