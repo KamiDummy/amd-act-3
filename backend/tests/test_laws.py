@@ -1,6 +1,6 @@
 from backend.laws import embedding_input, section_url
 from backend.models import Law, LawSection
-from backend.ontario_laws import parse_statute
+from backend.ontario_laws import law_path, parse_law
 
 FEDERAL = "https://laws-lois.justice.gc.ca/eng/acts/L-2/index.html"
 
@@ -45,8 +45,8 @@ CONTENT = """
 
 
 def test_parse_statute_reads_sections_notes_and_anchors():
-    act = parse_statute(
-        "00e41",
+    act = parse_law(
+        "statute/00e41",
         {
             "content": CONTENT,
             "title": "Employment Standards Act, 2000, S.O. 2000, c. 41",
@@ -75,4 +75,37 @@ def test_parse_statute_reads_sections_notes_and_anchors():
 
 
 def test_parse_statute_without_sections_is_none():
-    assert parse_statute("x", {"content": '<p class="headnote">Nothing</p>'}) is None
+    assert parse_law("statute/x", {"content": '<p class="headnote">Nothing</p>'}) is None
+
+
+def test_parse_regulation_reads_suffixed_classes_and_names_it():
+    content = """
+<p class="TOCid-e"><a href="#BK2">1.</a></p>
+<p class="headnote-e">Exemptions, professional services</p>
+<p class="section"><a name="BK2"></a><b>1.</b> A professional service is exempt from the Act if,</p>
+<p class="clause-e">(a) it is provided by a person governed by a listed Act; or</p>
+<p class="clause-e">(b) it is provided at a listed facility.</p>
+"""
+    act = parse_law(
+        "regulation/050017",
+        {"content": content, "title": "GENERAL", "actName": {"en": "Consumer Protection Act, 2002"}},
+    )
+
+    assert (act.id, act.kind) == ("ON-R-050017", "regulation")
+    assert act.title == "O. Reg. 17/05 under the Consumer Protection Act, 2002"
+    assert act.url == "https://www.ontario.ca/laws/regulation/050017"
+    [section] = act.sections
+    assert (section.label, section.anchor, section.marginal_note) == (
+        "1",
+        "BK2",
+        "Exemptions, professional services",
+    )
+    assert section.text.splitlines()[1:] == [
+        "(a) it is provided by a person governed by a listed Act; or",
+        "(b) it is provided at a listed facility.",
+    ]
+
+
+def test_law_path_takes_bare_statute_names():
+    assert law_path("00e41") == "statute/00e41"
+    assert law_path("regulation/050017") == "regulation/050017"
