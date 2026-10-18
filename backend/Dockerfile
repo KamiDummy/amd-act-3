@@ -28,6 +28,8 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Settings need a database URL to import; nothing connects to it here.
 RUN DATABASE_URL=postgresql://build@localhost/build \
     python -c "from backend.laws import get_model; get_model()"
+# Use only that copy: don't check the Hugging Face Hub for updates on every start.
+ENV HF_HUB_OFFLINE=1
 
 RUN useradd --system --no-create-home app \
     && mkdir -p storage \
