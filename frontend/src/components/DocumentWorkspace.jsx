@@ -44,13 +44,14 @@ function scrollCardIntoView(key) {
 
 // The open document: the PDF on the left, the Review and Chat panel on the right.
 // Everything marked on the page is one list of items, built here:
-//   { key, source: 'scan' | 'mine', kind: 'auto' | 'highlight' | 'note', id, text,
+//   { key, source: 'scan' | 'mine', kind: 'auto' | 'scan' | 'note', id, text,
 //     pageNumber, rects, located, status: 'done' | 'loading' | 'error', error,
 //     analysis: { title, severity, explanation, recommendation, citations } | null,
 //     isRisk, name, defaultName, note, favorite, hidden, color, style }
-// Every item is a highlight: found by the automatic scan, or the user's own, with or
-// without a note. Checking one adds its analysis; isRisk says whether that found a
-// problem. The note is stored as the mark's "description", its name in the chat API.
+// Every item is a highlight: found by the automatic scan, or the user's own. The user's
+// are notes until they have one scanned, which adds its analysis; isRisk says whether
+// that found a problem. Any highlight can carry the user's text (note), stored as the
+// mark's "description", its name in the chat API.
 // The Show toggles (utils/show.js) decide which items the list and the page show.
 // onReset forgets the document's data on this device; give it key={document.id} (plus
 // a reset count) so each document starts with its own state.
@@ -142,7 +143,7 @@ function DocumentWorkspace({ document: doc, onReset }) {
       const note = mark.description ?? null
       return {
         ...item,
-        kind: itemKind({ source: item.source, note }),
+        kind: itemKind(item),
         located: item.rects.length > 0,
         isRisk: Boolean(severity) && severity !== 'none',
         defaultName,
@@ -232,7 +233,7 @@ function DocumentWorkspace({ document: doc, onReset }) {
 
   // Opens a highlight the user just made from the page, turning Show on for it if needed.
   function openNew(key, { editNote = false } = {}) {
-    setShow({ ...show, highlight: true, note: true, favoritesOnly: false })
+    setShow({ ...show, scan: true, note: true, favoritesOnly: false })
     setTab('review')
     setActiveKey(key)
     setEditNoteKey(editNote ? key : null)
@@ -273,12 +274,6 @@ function DocumentWorkspace({ document: doc, onReset }) {
 
   function passageOf(current) {
     return { text: current.text, pageNumber: current.pageNumber, rects: current.rects }
-  }
-
-  function handleHighlight(color) {
-    const id = highlights.add(passageOf(selection))
-    marks.update(highlightKey(id), { color })
-    clearSelection()
   }
 
   function handleNote() {
@@ -406,10 +401,9 @@ function DocumentWorkspace({ document: doc, onReset }) {
       {selection && (
         <SelectionPopover
           selection={selection}
-          onHighlight={handleHighlight}
+          onScan={handleCheckSelection}
           onNote={handleNote}
-          onCheck={handleCheckSelection}
-          onAsk={() => {
+          onSendToChat={() => {
             askAbout(selection.text, selection.pageNumber)
             clearSelection()
           }}

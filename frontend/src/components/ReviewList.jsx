@@ -5,10 +5,9 @@ function formatElapsed(seconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-// The Review tab: Show toggles, then the user's own highlights and notes, then what the
-// automatic scan found, each in page order. items come from DocumentWorkspace, already
-// sorted; show is the toggles (utils/show.js), which the workspace keeps because they
-// filter the page too.
+// The Highlights tab: the automatic scan, the Show toggles, then every highlight top to
+// bottom in page order. items come from DocumentWorkspace, already sorted; show is the
+// toggles (utils/show.js), which the workspace keeps because they filter the page too.
 function ReviewList({
   scan,
   items,
@@ -25,8 +24,6 @@ function ReviewList({
   onReset,
 }) {
   const visible = items.filter((item) => isShown(item, show))
-  const mine = visible.filter((item) => item.kind !== 'auto')
-  const auto = visible.filter((item) => item.kind === 'auto')
   const hiddenCount = items.filter((item) => item.hidden).length
   const findings = scan.result?.findings ?? []
   const severityCounts = ['high', 'medium', 'low']
@@ -37,58 +34,26 @@ function ReviewList({
     onShowChange({ ...show, [key]: !show[key] })
   }
 
-  function renderCards(list) {
-    return (
-      <ol className="rv-list">
-        {list.map((item) => (
-          <li key={item.key}>
-            <ReviewCard
-              item={item}
-              active={item.key === activeKey}
-              editingNote={item.key === editNoteKey}
-              onSelect={onSelect}
-              onChange={(changes) => onChange(item, changes)}
-              onCheck={onCheck}
-              onAsk={onAsk}
-              onDelete={onDelete}
-              onNoteDone={onNoteDone}
-            />
-          </li>
-        ))}
-      </ol>
-    )
-  }
-
-  let scanStatus = null
+  let scanStatus
   if (scan.scanning) {
     scanStatus = (
-      <div className="rv-scan-status" aria-busy="true">
-        <span>
-          Scanning… <span className="rv-elapsed">{formatElapsed(scan.elapsedSeconds)}</span>
-        </span>
-        <div className="rv-progress" aria-hidden="true">
-          <span />
-        </div>
-      </div>
+      <span>
+        Scanning the whole document… <span className="rv-elapsed">{formatElapsed(scan.elapsedSeconds)}</span>
+      </span>
     )
   } else if (scan.error) {
-    scanStatus = (
-      <p className="rv-scan-status rv-error-text" role="alert">
-        {scan.error.message}
-      </p>
-    )
+    scanStatus = <span className="rv-error-text">{scan.error.message}</span>
   } else if (scan.result) {
-    scanStatus = (
-      <p className="rv-scan-status">
-        {severityCounts.length === 0
-          ? 'Nothing risky found.'
-          : severityCounts.map(([s, n]) => (
-              <span key={s} className={`rv-sev sev-${s}`}>
-                {n} {s}
-              </span>
-            ))}
-      </p>
-    )
+    scanStatus =
+      severityCounts.length === 0
+        ? 'Nothing risky found'
+        : severityCounts.map(([s, n]) => (
+            <span key={s} className={`rv-sev sev-${s}`}>
+              {n} {s}
+            </span>
+          ))
+  } else {
+    scanStatus = <span className="rv-muted">Finds risky clauses in the whole document.</span>
   }
 
   function handleReset() {
@@ -101,9 +66,30 @@ function ReviewList({
     }
   }
 
-  const mineOn = show.highlight || show.note
   return (
     <>
+      <div className="rv-autoscan" aria-busy={scan.scanning}>
+        <div className="rv-autoscan-row">
+          <span className="rv-autoscan-title">Auto scan</span>
+          <span className="rv-scan-status">{scanStatus}</span>
+          {!scan.scanning && (
+            <button
+              type="button"
+              className={scan.result ? 'secondary small' : 'small'}
+              onClick={scan.start}
+              disabled={scan.error?.status === 503}
+            >
+              {scan.result ? 'Re-run' : scan.error ? 'Try again' : 'Run'}
+            </button>
+          )}
+        </div>
+        {scan.scanning && (
+          <div className="rv-progress" aria-hidden="true">
+            <span />
+          </div>
+        )}
+      </div>
+
       <div className="rv-show" role="group" aria-label="Show">
         <span className="rv-show-label">Show</span>
         {KINDS.map((kind) => {
@@ -133,53 +119,31 @@ function ReviewList({
       </div>
 
       <div className="rv-body">
-        <section className="rv-section" aria-label="Your highlights and notes">
-          <h3 className="rv-section-title">
-            Yours
-            {mine.length > 0 && <span className="rv-chip-count">{mine.length}</span>}
-          </h3>
-          {!mineOn ? (
-            <p className="rv-empty">Turned off in Show.</p>
-          ) : mine.length > 0 ? (
-            renderCards(mine)
-          ) : (
-            <p className="rv-empty">
-              {items.some((item) => item.kind !== 'auto')
-                ? 'None match what Show is set to.'
-                : 'Select text in the document to highlight it or add a note.'}
-            </p>
-          )}
-        </section>
-
-        <section className="rv-section" aria-label="Automatic scan">
-          <div className="rv-section-head">
-            <h3 className="rv-section-title">
-              Auto scan
-              {auto.length > 0 && <span className="rv-chip-count">{auto.length}</span>}
-            </h3>
-            {!scan.scanning && (
-              <button
-                type="button"
-                className={scan.result ? 'secondary small' : 'small'}
-                onClick={scan.start}
-                disabled={scan.error?.status === 503}
-              >
-                {scan.result ? 'Re-run' : scan.error ? 'Try again' : 'Run auto scan'}
-              </button>
-            )}
-          </div>
-          {scanStatus}
-          {!show.auto ? (
-            scan.result && <p className="rv-empty">Turned off in Show.</p>
-          ) : auto.length > 0 ? (
-            renderCards(auto)
-          ) : (
-            !scan.result &&
-            !scan.scanning && (
-              <p className="rv-empty">Finds risky clauses in the whole document. Takes about a minute.</p>
-            )
-          )}
-        </section>
+        {visible.length === 0 ? (
+          <p className="rv-empty">
+            {items.length === 0
+              ? 'Select text in the document to scan it, add a note or send it to chat.'
+              : 'No highlights match what Show is set to.'}
+          </p>
+        ) : (
+          <ol className="rv-list">
+            {visible.map((item) => (
+              <li key={item.key}>
+                <ReviewCard
+                  item={item}
+                  active={item.key === activeKey}
+                  editingNote={item.key === editNoteKey}
+                  onSelect={onSelect}
+                  onChange={(changes) => onChange(item, changes)}
+                  onCheck={onCheck}
+                  onAsk={onAsk}
+                  onDelete={onDelete}
+                  onNoteDone={onNoteDone}
+                />
+              </li>
+            ))}
+          </ol>
+        )}
 
         <div className="rv-foot">
           {hiddenCount > 0 && (

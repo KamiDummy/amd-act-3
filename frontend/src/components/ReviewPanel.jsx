@@ -1,7 +1,7 @@
 import './ReviewPanel.css'
 
 const TABS = [
-  { id: 'review', label: 'Review' },
+  { id: 'review', label: 'Highlights' },
   { id: 'chat', label: 'Chat' },
 ]
 
@@ -9,7 +9,7 @@ const TABS = [
 // counts: { review, chat } shown next to the tab names (null hides it).
 function ReviewPanel({ tab, onTabChange, counts, children }) {
   return (
-    <aside className="rv" aria-label="Review">
+    <aside className="rv" aria-label="Highlights and chat">
       <div className="rv-tabs" role="tablist">
         {TABS.map((t) => (
           <button

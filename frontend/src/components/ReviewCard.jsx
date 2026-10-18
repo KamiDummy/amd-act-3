@@ -4,12 +4,12 @@ import NoteEditor from './NoteEditor'
 import PenPicker from './PenPicker'
 import './Pens.css'
 
-const KIND_LABEL = { auto: 'Auto', highlight: 'Highlight', note: 'Note' }
+const KIND_LABEL = { auto: 'Auto scan', scan: 'Scan', note: 'Note' }
 const RISK_LABEL = { high: 'High risk', medium: 'Medium risk', low: 'Low risk', none: 'Looks fine' }
 
-// One highlight in the Review list: found by the automatic scan, or the user's own
-// (with or without a note). A checked one carries a risk badge. Click the header to
-// open it; the parent scrolls the PDF to it. See DocumentWorkspace for the item's shape.
+// One highlight in the list: found by the automatic scan, scanned at the user's request,
+// or a note (the user's own, no LLM). Scanned ones carry a risk badge. Click the header
+// to open it; the parent scrolls the PDF to it. See DocumentWorkspace for the item's shape.
 // onChange(changes) saves the user's marks: { name, description (the note), favorite,
 // hidden, color, style }. editingNote opens the note editor at once.
 function ReviewCard({ item, active, editingNote, onSelect, onChange, onCheck, onAsk, onDelete, onNoteDone }) {
@@ -58,8 +58,8 @@ function ReviewCard({ item, active, editingNote, onSelect, onChange, onCheck, on
           >
             <span className="rv-meta">
               <span className="rv-kind">{KIND_LABEL[item.kind]}</span>
-              {busy && <span className="rv-sev">Checking…</span>}
-              {item.status === 'error' && <span className="rv-sev rv-sev-error">Check didn’t finish</span>}
+              {busy && <span className="rv-sev">Scanning…</span>}
+              {item.status === 'error' && <span className="rv-sev rv-sev-error">Scan didn’t finish</span>}
               {!busy && severity && <span className={`rv-sev sev-${severity}`}>{RISK_LABEL[severity]}</span>}
               <span className="rv-page">{item.located ? `p. ${item.pageNumber}` : 'not on page'}</span>
             </span>
@@ -146,7 +146,7 @@ function ReviewCard({ item, active, editingNote, onSelect, onChange, onCheck, on
           ) : (
             !busy && (
               <button type="button" className="secondary small rv-check" onClick={() => onCheck(item)}>
-                Check for risks and related law
+                Scan for risks and related law
               </button>
             )
           )}
@@ -158,11 +158,11 @@ function ReviewCard({ item, active, editingNote, onSelect, onChange, onCheck, on
                 Rename
               </button>
               <button type="button" className="rv-link" onClick={() => onAsk(item)}>
-                Ask in chat
+                Send to chat
               </button>
               {item.source === 'mine' && item.analysis && !busy && (
                 <button type="button" className="rv-link" onClick={() => onCheck(item)}>
-                  Re-check
+                  Re-scan
                 </button>
               )}
               {item.source === 'mine' && (
