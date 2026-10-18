@@ -1,42 +1,38 @@
-import NoteEditor from './NoteEditor'
 import ReviewCard from './ReviewCard'
 
 const FILTERS = [
   { id: 'all', label: 'All', test: () => true },
-  { id: 'loophole', label: 'Loopholes', test: (item) => item.kind === 'loophole' },
-  { id: 'check', label: 'Checked', test: (item) => item.kind === 'check' },
-  { id: 'highlight', label: 'Highlights', test: (item) => item.kind === 'highlight' },
-  { id: 'note', label: 'Notes', test: (item) => Boolean(item.note) },
+  { id: 'risk', label: 'Risks', test: (item) => item.isRisk },
+  { id: 'highlight', label: 'Highlights', test: (item) => !item.analysis },
+  { id: 'favorite', label: '★ Favourites', test: (item) => item.favorite },
 ]
 
 function formatElapsed(seconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-// The Review tab: the loophole scan, then everything marked on the document, in page
-// order, filterable by kind. items come from DocumentWorkspace, already sorted.
-// filter is one of FILTERS' ids; the workspace keeps it, to show all when a highlight
-// on the page is clicked.
+// The Review tab: the risk scan, then everything marked on the document in page order,
+// filterable, with hidden items left out unless asked for. items come from
+// DocumentWorkspace, already sorted. filter is one of FILTERS' ids; the workspace keeps
+// it and showHidden, to reveal an item clicked on the page.
 function ReviewList({
   scan,
   items,
   filter,
   onFilterChange,
+  showHidden,
+  onShowHiddenChange,
   activeKey,
-  editNoteKey,
   onSelect,
-  onSaveNote,
-  onCancelNote,
-  onChangePen,
+  onChange,
+  onCheck,
   onAsk,
-  onRemove,
-  onRetry,
-  documentNote,
-  onSaveDocumentNote,
-  dismissedCount,
-  onRestoreDismissed,
+  onDelete,
+  onReset,
 }) {
-  const visible = items.filter(FILTERS.find((f) => f.id === filter).test)
+  const test = FILTERS.find((f) => f.id === filter).test
+  const visible = items.filter((item) => test(item) && (showHidden || !item.hidden))
+  const hiddenCount = items.filter((item) => item.hidden).length
   const findings = scan.result?.findings ?? []
 
   const severityCounts = ['high', 'medium', 'low']
@@ -47,7 +43,7 @@ function ReviewList({
   if (scan.scanning) {
     scanBar = (
       <div className="rv-scan" aria-busy="true">
-        <span className="rv-scan-text">Scanning for loopholes…</span>
+        <span className="rv-scan-text">Scanning for risks…</span>
         <span className="rv-elapsed">{formatElapsed(scan.elapsedSeconds)}</span>
         <div className="rv-progress" aria-hidden="true">
           <span />
@@ -70,7 +66,7 @@ function ReviewList({
       <div className="rv-scan">
         <span className="rv-scan-text">
           {severityCounts.length === 0
-            ? 'No loopholes found'
+            ? 'The scan found no risks'
             : severityCounts.map(([s, n]) => (
                 <span key={s} className={`rv-sev sev-${s}`}>
                   {n} {s}
@@ -86,10 +82,20 @@ function ReviewList({
     scanBar = (
       <div className="rv-scan">
         <button type="button" className="rv-scan-start" onClick={scan.start}>
-          Find loopholes
+          Scan for risks
         </button>
       </div>
     )
+  }
+
+  function handleReset() {
+    if (
+      window.confirm(
+        'Reset this document? Its scan, your highlights, names, descriptions and the chat are deleted from this device.',
+      )
+    ) {
+      onReset()
+    }
   }
 
   return (
@@ -98,7 +104,7 @@ function ReviewList({
 
       <div className="rv-filters" role="group" aria-label="Show">
         {FILTERS.map((f) => {
-          const count = items.filter(f.test).length
+          const count = items.filter((item) => f.test(item) && (showHidden || !item.hidden)).length
           return (
             <button
               key={f.id}
@@ -115,23 +121,11 @@ function ReviewList({
       </div>
 
       <div className="rv-body">
-        {(filter === 'all' || filter === 'note') && (
-          <section className="rv-doc-note">
-            <NoteEditor
-              note={documentNote}
-              onSave={onSaveDocumentNote}
-              addLabel="+ Note on this document"
-              label="Document note"
-              placeholder="Questions to ask, things to check, what to negotiate…"
-            />
-          </section>
-        )}
-
         {visible.length === 0 ? (
           <p className="rv-empty">
             {items.length === 0
-              ? 'Select text in the document to highlight it, add a note, check it or ask about it.'
-              : 'Nothing here yet.'}
+              ? 'Select text in the document to highlight it, check it or ask about it.'
+              : 'Nothing here.'}
           </p>
         ) : (
           <ol className="rv-list">
@@ -140,28 +134,27 @@ function ReviewList({
                 <ReviewCard
                   item={item}
                   active={item.key === activeKey}
-                  editingNote={item.key === editNoteKey}
                   onSelect={onSelect}
-                  onSaveNote={(text) => onSaveNote(item, text)}
-                  onCancelNote={onCancelNote}
-                  onChangePen={(change) => onChangePen(item, change)}
+                  onChange={(changes) => onChange(item, changes)}
+                  onCheck={onCheck}
                   onAsk={onAsk}
-                  onRemove={onRemove}
-                  onRetry={onRetry}
+                  onDelete={onDelete}
                 />
               </li>
             ))}
           </ol>
         )}
 
-        {dismissedCount > 0 && (filter === 'all' || filter === 'loophole') && (
-          <p className="rv-dismissed">
-            {dismissedCount} dismissed ·{' '}
-            <button type="button" className="rv-link" onClick={onRestoreDismissed}>
-              Show again
+        <div className="rv-foot">
+          {hiddenCount > 0 && (
+            <button type="button" className="rv-link" onClick={() => onShowHiddenChange(!showHidden)}>
+              {showHidden ? 'Leave out hidden' : `Show ${hiddenCount} hidden`}
             </button>
-          </p>
-        )}
+          )}
+          <button type="button" className="rv-link rv-link-danger" onClick={handleReset}>
+            Reset this document
+          </button>
+        </div>
       </div>
     </>
   )

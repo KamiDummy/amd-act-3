@@ -507,3 +507,102 @@
 .pen-style-box {
   box-shadow: inset 0 0 0 1.5px var(--pen);
 }
+
+/* ---------- Card header: name, favourite star, renaming ---------- */
+
+.rv-card-top {
+  display: flex;
+  align-items: flex-start;
+}
+
+.rv-card-top .rv-card-head {
+  flex: 1;
+  min-width: 0;
+}
+
+.rv-star {
+  flex: none;
+  margin: 6px 6px 0 0;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 17px;
+  line-height: 1;
+}
+
+.rv-star:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--text-h);
+}
+
+.rv-star.is-on,
+.rv-star.is-on:hover:not(:disabled) {
+  color: oklch(0.7 0.15 80);
+}
+
+.rv-rename {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  padding: 10px 6px 10px 16px;
+}
+
+.rv-rename input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-h);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rv-rename input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* The kind label takes the severity colour for risks. */
+.rv-kind.sev-high {
+  color: var(--high);
+}
+
+.rv-kind.sev-medium {
+  color: var(--med);
+}
+
+.rv-kind.sev-low {
+  color: var(--low);
+}
+
+.rv-kind.sev-none {
+  color: var(--pen-green);
+}
+
+.rv-card.is-hidden {
+  opacity: 0.6;
+}
+
+.rv-check {
+  align-self: flex-start;
+}
+
+.rv-card-actions {
+  flex-wrap: wrap;
+}
+
+.rv-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}

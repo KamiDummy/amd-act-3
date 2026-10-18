@@ -1,17 +1,16 @@
 import { useState } from 'react'
-import './NoteEditor.css'
+import './DescriptionEditor.css'
 
-// A personal note on a marked passage or the whole document.
-// note: the saved text, or null. onSave(text): an empty text deletes the note.
-// startEditing opens the editor right away, e.g. for a note just added from the page;
+// The user's description of a marked passage: what it means to them, what to ask.
+// note: the saved text, or null. onSave(text): an empty text deletes it.
 // onCancel is called when the user closes the editor without saving.
-function NoteEditor({
+function DescriptionEditor({
   note,
   onSave,
   onCancel,
   startEditing = false,
-  addLabel = '+ Add a note',
-  label = 'Your note',
+  addLabel = '+ Add a description',
+  label = 'Description',
   placeholder,
 }) {
   const [editing, setEditing] = useState(startEditing)
@@ -47,14 +46,14 @@ function NoteEditor({
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder ?? 'Write a note for yourself or your lawyer…'}
+          placeholder={placeholder ?? 'What this means for you, what to ask or negotiate…'}
           aria-label={label}
           rows={3}
           autoFocus
         />
         <div className="note-actions">
           <button type="button" className="small" onClick={save}>
-            Save note
+            Save
           </button>
           <button type="button" className="note-link" onClick={cancel}>
             Cancel
@@ -91,4 +90,4 @@ function NoteEditor({
   )
 }
 
-export default NoteEditor
+export default DescriptionEditor

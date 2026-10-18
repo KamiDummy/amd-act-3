@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { MAX_QUESTION_CHARS } from '../api/analysis'
 import CitationList from './CitationList'
 import './ChatPanel.css'
+import './Pens.css'
 
 const SUGGESTIONS = [
   'What are the biggest risks for me?',
   'Can they end this contract early?',
-  'What do I have to pay, and when?',
+  'List my highlights and what they mean',
 ]
 
 // **bold** inside a line, as React elements (never as HTML).
@@ -35,28 +36,89 @@ function AnswerText({ text }) {
   })
 }
 
-function Answer({ message, onShowReference }) {
+// One of the user's items, shown in an answer that mentions or changed it.
+function ItemChip({ item, prefix, onShowItem }) {
+  return (
+    <button
+      type="button"
+      className={`chat-item pen-${item.color}`}
+      onClick={() => onShowItem(item.key)}
+      title={item.text}
+    >
+      {prefix && <span className="chat-item-prefix">{prefix}</span>}
+      <span className="chat-item-name">{item.name}</span>
+      {item.located && <span className="chat-item-page">p. {item.pageNumber}</span>}
+    </button>
+  )
+}
+
+const ACTION_PREFIX = { create_highlight: 'Created', update_item: 'Updated' }
+
+function Answer({ message, items, onShowReference, onSaveReference, savedQuotes, onShowItem }) {
   const [showLaw, setShowLaw] = useState(false)
-  const { references = [], citations = [] } = message
+  const { references = [], citations = [], mentions = [], actions = [] } = message
+  const byKey = new Map(items.map((item) => [item.key, item]))
+  // The items the answer changed, then the others it is about.
+  const changed = actions
+    .map((action) => ({
+      action,
+      item:
+        action.type === 'update_item'
+          ? byKey.get(action.id)
+          : items.find((i) => i.source === 'mine' && i.text === action.quote),
+    }))
+    .filter(({ item }) => item)
+  const changedKeys = new Set(changed.map(({ item }) => item.key))
+  const mentioned = mentions.map((key) => byKey.get(key)).filter((item) => item && !changedKeys.has(item.key))
+
   return (
     <div className="chat-msg is-assistant">
       <div className="chat-text">
         <AnswerText text={message.content} />
       </div>
+      {(changed.length > 0 || mentioned.length > 0) && (
+        <div className="chat-items">
+          {changed.map(({ action, item }, i) => (
+            <ItemChip
+              key={`a${i}`}
+              item={item}
+              prefix={ACTION_PREFIX[action.type]}
+              onShowItem={onShowItem}
+            />
+          ))}
+          {mentioned.map((item) => (
+            <ItemChip key={item.key} item={item} onShowItem={onShowItem} />
+          ))}
+        </div>
+      )}
       {(references.length > 0 || citations.length > 0) && (
         <div className="chat-sources">
-          {references.map((ref, i) => (
-            <button
-              key={i}
-              type="button"
-              className="chat-ref"
-              onClick={() => onShowReference(ref)}
-              title={`“${ref.quote}”`}
-            >
-              <span className="chat-ref-page">p. {ref.page_number}</span>
-              <span className="chat-ref-quote">{ref.quote}</span>
-            </button>
-          ))}
+          {references.map((ref, i) => {
+            const saved = savedQuotes.has(ref.quote)
+            return (
+              <span key={i} className="chat-ref-group">
+                <button
+                  type="button"
+                  className="chat-ref"
+                  onClick={() => onShowReference(ref)}
+                  title={`“${ref.quote}”`}
+                >
+                  <span className="chat-ref-page">p. {ref.page_number}</span>
+                  <span className="chat-ref-quote">{ref.quote}</span>
+                </button>
+                <button
+                  type="button"
+                  className="chat-ref-save"
+                  onClick={() => onSaveReference(ref)}
+                  disabled={saved}
+                  aria-label={saved ? 'Saved as a highlight' : 'Save as a highlight'}
+                  title={saved ? 'Saved as a highlight' : 'Save as a highlight'}
+                >
+                  {saved ? '✓' : '+'}
+                </button>
+              </span>
+            )
+          })}
           {citations.length > 0 && (
             <button
               type="button"
@@ -78,11 +140,24 @@ function Answer({ message, onShowReference }) {
   )
 }
 
-// The Chat tab: questions and answers about the document. Answers link to the passages
-// they rely on (onShowReference scrolls the PDF there). attachment is a passage the
+// The Chat tab: questions and answers about the document and the user's items. Answers
+// link to the passages they rely on (onShowReference scrolls the PDF there; the + saves
+// one as a highlight) and show the items they mention or changed (onShowItem shows one).
+// items: the workspace's items, to show those by key. savedQuotes: the texts of the
+// user's highlights, so a saved reference shows as saved. attachment is a passage the
 // user sent here from the page or the Review list, asked about with the next question.
 // focusSignal: change it to focus the question box.
-function ChatPanel({ chat, attachment, onClearAttachment, onShowReference, focusSignal }) {
+function ChatPanel({
+  chat,
+  items,
+  savedQuotes,
+  attachment,
+  onClearAttachment,
+  onShowReference,
+  onSaveReference,
+  onShowItem,
+  focusSignal,
+}) {
   const [draft, setDraft] = useState('')
   const inputRef = useRef(null)
   const endRef = useRef(null)
@@ -164,7 +239,16 @@ function ChatPanel({ chat, attachment, onClearAttachment, onShowReference, focus
                   ×
                 </button>
               </div>
-              {answer && <Answer message={answer} onShowReference={onShowReference} />}
+              {answer && (
+                <Answer
+                  message={answer}
+                  items={items}
+                  onShowReference={onShowReference}
+                  onSaveReference={onSaveReference}
+                  savedQuotes={savedQuotes}
+                  onShowItem={onShowItem}
+                />
+              )}
               {isPending && pending.status === 'loading' && (
                 <div className="chat-msg is-assistant" aria-busy="true">
                   <span className="chat-typing" aria-label="Answering">

@@ -1,64 +1,93 @@
+import { useState } from 'react'
 import CitationList from './CitationList'
-import NoteEditor from './NoteEditor'
+import DescriptionEditor from './DescriptionEditor'
 import PenPicker from './PenPicker'
-import { SEVERITY_LABEL } from './severity'
 import './Pens.css'
 
-const KIND_LABEL = { loophole: 'Loophole', check: 'Checked', highlight: 'Highlight' }
+const RISK_LEVEL = { high: 'High', medium: 'Medium', low: 'Low' }
 
-// One marked passage in the Review list: a loophole the scan found, a clause the user
-// had checked, or the user's own highlight. Click the header to open it; the parent
+// The label above an item's name: what it is, and how risky when it was checked.
+function kindLabel(item) {
+  if (item.status === 'loading') return 'Checking…'
+  if (item.status === 'error') return 'Check didn’t finish'
+  if (!item.analysis) return 'Highlight'
+  if (item.analysis.severity === 'none') return 'Checked · Looks fine'
+  return `Risk · ${RISK_LEVEL[item.analysis.severity]}`
+}
+
+// One marked passage in the Review list: a risk (found by the scan, or a highlight the
+// user had checked) or a plain highlight. Click the header to open it; the parent
 // scrolls the PDF to it. See DocumentWorkspace for the item's shape.
-function ReviewCard({
-  item,
-  active,
-  editingNote,
-  onSelect,
-  onSaveNote,
-  onCancelNote,
-  onChangePen,
-  onAsk,
-  onRemove,
-  onRetry,
-}) {
-  const { kind, status } = item
-  const removeLabel = kind === 'loophole' ? 'Dismiss' : 'Delete'
+// onChange(changes) saves the user's marks: { name, description, favorite, hidden,
+// color, style }.
+function ReviewCard({ item, active, onSelect, onChange, onCheck, onAsk, onDelete }) {
+  const [renaming, setRenaming] = useState(false)
+  const [draftName, setDraftName] = useState('')
+  const busy = item.status === 'loading'
+  const severity = item.analysis?.severity
 
+  function startRename() {
+    setDraftName(item.name)
+    setRenaming(true)
+  }
+
+  function saveName(event) {
+    event.preventDefault()
+    const name = draftName.trim()
+    // An empty name, or the default one, goes back to the default.
+    onChange({ name: name && name !== item.defaultName ? name : null })
+    setRenaming(false)
+  }
+
+  const classes = ['rv-card', `pen-${item.color}`, active && 'is-active', item.hidden && 'is-hidden']
   return (
-    <article
-      id={`item-${item.key}`}
-      className={`rv-card pen-${item.color}${active ? ' is-active' : ''}`}
-      aria-busy={status === 'loading'}
-    >
-      <button
-        type="button"
-        className="rv-card-head"
-        onClick={() => onSelect(active ? null : item.key)}
-        aria-expanded={active}
-      >
-        <span className="rv-meta">
-          <span className="rv-kind">{KIND_LABEL[kind]}</span>
-          {status === 'done' && item.severity && (
-            <span className={`rv-sev sev-${item.severity}`}>{SEVERITY_LABEL[item.severity]}</span>
-          )}
-          {status === 'loading' && <span className="rv-sev">Checking…</span>}
-          {status === 'error' && <span className="rv-sev rv-sev-error">Didn’t finish</span>}
-          <span className="rv-page">{item.located ? `p. ${item.pageNumber}` : 'not on page'}</span>
-          {item.note && (
-            <span className="rv-has-note" title="Has a note">
-              ✎
-            </span>
-          )}
-        </span>
-        {item.title ? (
-          <span className="rv-title">{item.title}</span>
+    <article id={`item-${item.key}`} className={classes.filter(Boolean).join(' ')} aria-busy={busy}>
+      <div className="rv-card-top">
+        {renaming ? (
+          <form className="rv-rename" onSubmit={saveName}>
+            <input
+              value={draftName}
+              onChange={(event) => setDraftName(event.target.value)}
+              onKeyDown={(event) => event.key === 'Escape' && setRenaming(false)}
+              aria-label="Name"
+              maxLength={120}
+              autoFocus
+            />
+            <button type="submit" className="small">
+              Save
+            </button>
+          </form>
         ) : (
-          <span className="rv-quote rv-clamp">“{item.text}”</span>
+          <button
+            type="button"
+            className="rv-card-head"
+            onClick={() => onSelect(active ? null : item.key)}
+            aria-expanded={active}
+          >
+            <span className="rv-meta">
+              <span className={`rv-kind${severity ? ` sev-${severity}` : ''}`}>{kindLabel(item)}</span>
+              <span className="rv-page">{item.located ? `p. ${item.pageNumber}` : 'not on page'}</span>
+              {item.hidden && <span className="rv-page">hidden</span>}
+            </span>
+            <span className="rv-title">{item.name}</span>
+            {!active && item.description && (
+              <span className="rv-note-preview rv-clamp">{item.description}</span>
+            )}
+          </button>
         )}
-        {!active && item.note && <span className="rv-note-preview rv-clamp">{item.note}</span>}
-      </button>
+        <button
+          type="button"
+          className={item.favorite ? 'rv-star is-on' : 'rv-star'}
+          onClick={() => onChange({ favorite: !item.favorite })}
+          aria-pressed={item.favorite}
+          aria-label={item.favorite ? 'Remove from favourites' : 'Add to favourites'}
+          title={item.favorite ? 'Favourite' : 'Add to favourites'}
+        >
+          {item.favorite ? '★' : '☆'}
+        </button>
+      </div>
 
-      {status === 'loading' && (
+      {busy && (
         <div className="rv-card-body">
           <div className="rv-progress" aria-hidden="true">
             <span />
@@ -66,11 +95,11 @@ function ReviewCard({
         </div>
       )}
 
-      {status === 'error' && (
+      {item.status === 'error' && (
         <div className="rv-card-body rv-error-text" role="alert">
           <p>{item.error.message}</p>
           {item.error.status !== 422 && item.error.status !== 503 && (
-            <button type="button" className="secondary small" onClick={() => onRetry(item)}>
+            <button type="button" className="secondary small" onClick={() => onCheck(item)}>
               Try again
             </button>
           )}
@@ -79,31 +108,53 @@ function ReviewCard({
 
       {active && (
         <div className="rv-card-body">
-          {item.title && <blockquote className="rv-quote">“{item.text}”</blockquote>}
-          {item.explanation && <p>{item.explanation}</p>}
-          {item.recommendation && (
-            <p className="rv-todo">
-              <b>What you can do:</b> {item.recommendation}
-            </p>
-          )}
-          {item.citations && <CitationList citations={item.citations} />}
+          {item.name !== item.text && <blockquote className="rv-quote">“{item.text}”</blockquote>}
 
-          <NoteEditor
-            note={item.note}
-            onSave={onSaveNote}
-            onCancel={onCancelNote}
-            startEditing={editingNote}
+          {item.analysis ? (
+            <>
+              {item.analysis.explanation && <p>{item.analysis.explanation}</p>}
+              {item.analysis.recommendation && (
+                <p className="rv-todo">
+                  <b>What you can do:</b> {item.analysis.recommendation}
+                </p>
+              )}
+              <CitationList citations={item.analysis.citations} />
+            </>
+          ) : (
+            !busy && (
+              <button type="button" className="secondary small rv-check" onClick={() => onCheck(item)}>
+                Check for risks and related law
+              </button>
+            )
+          )}
+
+          <DescriptionEditor
+            note={item.description}
+            onSave={(text) => onChange({ description: text || null })}
           />
 
           <div className="rv-card-tools">
-            <PenPicker color={item.color} style={item.style} onChange={onChangePen} />
+            <PenPicker color={item.color} style={item.style} onChange={onChange} />
             <div className="rv-card-actions">
+              <button type="button" className="rv-link" onClick={startRename}>
+                Rename
+              </button>
               <button type="button" className="rv-link" onClick={() => onAsk(item)}>
                 Ask in chat
               </button>
-              <button type="button" className="rv-link rv-link-danger" onClick={() => onRemove(item)}>
-                {removeLabel}
+              {item.source === 'mine' && item.analysis && !busy && (
+                <button type="button" className="rv-link" onClick={() => onCheck(item)}>
+                  Re-check
+                </button>
+              )}
+              <button type="button" className="rv-link" onClick={() => onChange({ hidden: !item.hidden })}>
+                {item.hidden ? 'Unhide' : 'Hide'}
               </button>
+              {item.source === 'mine' && (
+                <button type="button" className="rv-link rv-link-danger" onClick={() => onDelete(item)}>
+                  Delete
+                </button>
+              )}
             </div>
           </div>
         </div>

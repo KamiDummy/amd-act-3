@@ -15,9 +15,9 @@ export const MAX_EXPLAIN_CHARS = 4000
 
 // Checks a passage the user selected for risks. Takes 10 to 30 seconds.
 // pageNumber is the page the selection starts on; it picks the right spot when the
-// same text appears twice. Resolves with { model, highlight, explanation,
-// severity ('high' | 'medium' | 'low' | 'none'), recommendation (empty when it's fine),
-// citations }.
+// same text appears twice. Resolves with { model, highlight, title (a short name),
+// explanation, severity ('high' | 'medium' | 'low' | 'none'), recommendation (empty
+// when it's fine), citations }.
 // Errors: 502 the AI failed, 503 not configured, 422 empty or too long a selection.
 export function explainSelection(documentId, text, pageNumber) {
   return apiRequest(`/api/documents/${documentId}/explain`, {
@@ -32,16 +32,23 @@ export const MAX_QUESTION_CHARS = 2000
 // Asks a question about the document. Takes 10 to 30 seconds.
 // history: the conversation so far, oldest first, as [{ role: 'user' | 'assistant', content }];
 // the backend only reads the last 20. selection: an attached passage { text, pageNumber }, or null.
-// Resolves with { model, answer, references, citations }. Each reference is a passage
-// the answer relies on: { quote, page_number, highlight }.
+// items: the user's marked passages, so the chat can find, list and change them:
+//   [{ id, kind: 'risk' | 'highlight', name, description, quote, page_number, severity }]
+// Resolves with { model, answer, references, citations, mentions, actions }:
+//   references: passages the answer relies on, { quote, page_number, highlight }
+//   mentions: ids of the items the answer is about
+//   actions: what the user asked the chat to change, each one of
+//     { type: 'create_highlight', name, description, quote, page_number, highlight }
+//     { type: 'update_item', id, name, description } (null fields stay as they are)
 // Errors: 502 the AI failed, 503 not configured, 422 empty or too long a question.
-export function askChat(documentId, question, history, selection) {
+export function askChat(documentId, question, history, selection, items = []) {
   return apiRequest(`/api/documents/${documentId}/chat`, {
     method: 'POST',
     body: {
       question,
       history,
       selection: selection ? { text: selection.text, page_number: selection.pageNumber } : null,
+      items,
     },
   })
 }
