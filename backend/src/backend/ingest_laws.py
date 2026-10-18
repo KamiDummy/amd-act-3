@@ -4,8 +4,10 @@ Run from the backend directory:
     uv run python -m backend.ingest_laws                 # download + load every Act and regulation
     uv run python -m backend.ingest_laws --only C-46 A-1 # just these laws (file names)
     uv run python -m backend.ingest_laws --limit 20      # first 20 files, for a test run
+    uv run python -m backend.ingest_laws --max-mb 450    # stop at a smaller database
 
-Safe to run again: laws already loaded are skipped (use --force to reload them).
+Safe to run again: laws already loaded are skipped (use --force to reload them). Loading
+stops once the database reaches --max-mb (see database.MAX_LAW_LOAD_MB).
 """
 
 import argparse
@@ -15,7 +17,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.exc import DBAPIError
 
-from backend.database import SessionLocal, engine
+from backend.database import MAX_LAW_LOAD_MB, SessionLocal, database_size_mb, engine
 from backend.laws import ParsedAct, parse_act, store_act
 from backend.models import Law
 
@@ -42,6 +44,9 @@ def main() -> None:
     parser.add_argument("--only", nargs="+", metavar="ID", help="file names, e.g. C-46")
     parser.add_argument("--limit", type=int, help="Stop after this many files")
     parser.add_argument("--force", action="store_true", help="Reload laws already stored")
+    parser.add_argument(
+        "--max-mb", type=float, default=MAX_LAW_LOAD_MB, help="stop at this database size (MiB)"
+    )
     args = parser.parse_args()
 
     eng_dir = fetch_xml()
@@ -58,6 +63,11 @@ def main() -> None:
     for i, path in enumerate(paths, 1):
         if path.stem in loaded and not args.force:
             continue
+        with SessionLocal() as db:
+            size = database_size_mb(db)
+        if size >= args.max_mb:
+            print(f"Stopped: the database is {size:.0f} MiB (limit {args.max_mb:.0f}).")
+            return
         act = parse_act(path)
         if act is None:
             print(f"[{i}/{len(paths)}] {path.stem}: skipped (repealed or not a law)")

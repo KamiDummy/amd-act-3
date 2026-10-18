@@ -1,6 +1,6 @@
 from backend.laws import embedding_input, section_url
 from backend.models import Law, LawSection
-from backend.ontario_laws import parse_statute
+from backend.ontario_laws import law_path, parse_law
 
 FEDERAL = "https://laws-lois.justice.gc.ca/eng/acts/L-2/index.html"
 
@@ -13,6 +13,9 @@ def test_federal_sections_link_to_their_own_page():
         == "https://laws-lois.justice.gc.ca/eng/acts/L-2/section-184.01.html"
     )
     assert section_url(law, LawSection(label="")) == FEDERAL
+    # A grouped label links to its first section; a label without a number to the law.
+    assert section_url(law, LawSection(label="31 and 32")).endswith("/section-31.html")
+    assert section_url(law, LawSection(label="Canada–Korea Convention")) == FEDERAL
 
 
 def test_ontario_sections_link_to_their_anchor():
@@ -41,12 +44,18 @@ CONTENT = """
 <p class="Ysubsection">(3) A provision that is not yet in force &amp; ignored.</p>
 <p class="headnote">Vacation pay</p>
 <p class="section"><a name="BK72"></a><b>35.2 </b>An employer shall pay vacation pay of at least 4 per cent of the employee&#8217;s wages.</p>
+<p class="headnote">When to pay</p>
+<p class="section"><b> <a name="BK73"></a>36.</b><b> </b>(1) Vacation pay is paid before the vacation starts.</p>
+<p class="paragraph"> (a) in a lump sum; or</p>
+<p class="section">unless the employee agrees otherwise in writing.</p>
+<p class="headnote">Public sector</p>
+<p class="section"><a name="BK90"></a>1 The public sector in Ontario consists of the Crown.</p>
 """
 
 
 def test_parse_statute_reads_sections_notes_and_anchors():
-    act = parse_statute(
-        "00e41",
+    act = parse_law(
+        "statute/00e41",
         {
             "content": CONTENT,
             "title": "Employment Standards Act, 2000, S.O. 2000, c. 41",
@@ -61,7 +70,13 @@ def test_parse_statute_reads_sections_notes_and_anchors():
     assert [(s.label, s.anchor, s.marginal_note) for s in act.sections] == [
         ("33", "BK68", "Right to vacation"),
         ("35.2", "BK72", "Vacation pay"),
+        # The anchor inside the bold label, and an empty bold run after it.
+        ("36", "BK73", "When to pay"),
+        # A schedule item numbered in plain text.
+        ("1", "BK90", "Public sector"),
     ]
+    # A "section" paragraph without a number continues the section before it.
+    assert act.sections[2].text.splitlines()[-1] == "unless the employee agrees otherwise in writing."
     vacation = act.sections[0]
     assert vacation.heading == "PART xi VACATION WITH PAY"
     assert vacation.text.splitlines() == [
@@ -75,4 +90,37 @@ def test_parse_statute_reads_sections_notes_and_anchors():
 
 
 def test_parse_statute_without_sections_is_none():
-    assert parse_statute("x", {"content": '<p class="headnote">Nothing</p>'}) is None
+    assert parse_law("statute/x", {"content": '<p class="headnote">Nothing</p>'}) is None
+
+
+def test_parse_regulation_reads_suffixed_classes_and_names_it():
+    content = """
+<p class="TOCid-e"><a href="#BK2">1.</a></p>
+<p class="headnote-e">Exemptions, professional services</p>
+<p class="section"><a name="BK2"></a><b>1.</b> A professional service is exempt from the Act if,</p>
+<p class="clause-e">(a) it is provided by a person governed by a listed Act; or</p>
+<p class="clause-e">(b) it is provided at a listed facility.</p>
+"""
+    act = parse_law(
+        "regulation/050017",
+        {"content": content, "title": "GENERAL", "actName": {"en": "Consumer Protection Act, 2002"}},
+    )
+
+    assert (act.id, act.kind) == ("ON-R-050017", "regulation")
+    assert act.title == "O. Reg. 17/05 under the Consumer Protection Act, 2002"
+    assert act.url == "https://www.ontario.ca/laws/regulation/050017"
+    [section] = act.sections
+    assert (section.label, section.anchor, section.marginal_note) == (
+        "1",
+        "BK2",
+        "Exemptions, professional services",
+    )
+    assert section.text.splitlines()[1:] == [
+        "(a) it is provided by a person governed by a listed Act; or",
+        "(b) it is provided at a listed facility.",
+    ]
+
+
+def test_law_path_takes_bare_statute_names():
+    assert law_path("00e41") == "statute/00e41"
+    assert law_path("regulation/050017") == "regulation/050017"
