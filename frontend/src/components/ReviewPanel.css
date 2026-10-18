@@ -112,10 +112,12 @@
   color: var(--text-muted);
 }
 
-/* The progress bar runs along the card's bottom edge. */
-.rv-autoscan-progress {
+/* The progress bar runs along the card's bottom edge, out of the row's flow. The extra
+   class outranks the general .rv-progress rule, which comes later in this file. */
+.rv-autoscan .rv-autoscan-progress {
   position: absolute;
   inset: auto 0 0 0;
+  width: auto;
   border-radius: 0;
 }
 
