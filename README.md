@@ -49,16 +49,33 @@ After pulling changes that touch `backend/src/backend/models.py`, run `uv run al
 
 Federal Acts and regulations live in the `laws` and `law_sections` tables, one row per section (long sections are split), each with a 384-dimension embedding from `BAAI/bge-small-en-v1.5` and an HNSW cosine index. The source is Justice Canada's consolidated XML at [justicecanada/laws-lois-xml](https://github.com/justicecanada/laws-lois-xml), published under the Open Government Licence - Canada.
 
-The shared Supabase database is already loaded, so you only need `uv run alembic upgrade head`. It holds 895 federal Acts (the other 76 of the 971 files had no section text, mostly repealed Acts, and were skipped) and 1,963 regulations, about 95,500 sections and 410 MB in total. Regulations were loaded in file-name order and **stopped at `SOR-2023-123`**, so the newest regulations (`SOR-2023-123` onward) are missing. The rest wouldn't fit under Supabase's 500 MB free-tier limit.
+The shared Supabase database is already loaded, so you only need `uv run alembic upgrade head`. It holds about 107,600 sections and 463 MiB in total:
 
-**Ontario law.** The same tables also hold two Ontario statutes, the Employment Standards Act, 2000 (`ON-00e41`) and the Residential Tenancies Act, 2006 (`ON-06r17`), 786 sections in all, because the demo contracts are an Ontario job and an Ontario lease and neither is governed by federal law. They come from [e-Laws](https://www.ontario.ca/laws), whose site reads each statute as HTML from a JSON API; `backend/src/backend/ontario_laws.py` parses it. Each law has a `jurisdiction` (`federal` or `ontario`), shown to the model with every candidate section, and Ontario sections are embedded with "(Ontario)" after the title, so a query that names the province finds them first. To load or refresh them (about a minute):
+| Law | Laws | Sections |
+| --- | --- | --- |
+| Federal Acts | 895 (the other 76 of the 971 files had no section text, mostly repealed, and were skipped) | 55,446 |
+| Federal regulations | 2,429 | 48,215 |
+| Ontario statutes | 21 | 3,637 |
+| Ontario regulations | 3 | 317 |
+
+Federal regulations were loaded in file-name order and **stopped at `SOR-87-612`** when the database reached the loaders' 460 MiB cap, so about 940 regulations from 1987 to 1999 (`SOR-87-6…` to `SOR-99-…`) are missing. Everything from 2000 on, including the newest (to 2026), is loaded.
+
+**Ontario law.** Most everyday contracts are governed by provincial law, so the same tables also hold the Ontario laws behind them, from [e-Laws](https://www.ontario.ca/laws), whose site reads each law as HTML from a JSON API; `backend/src/backend/ontario_laws.py` parses it. `LAWS` in that file lists them, most useful first:
+
+- Jobs: Employment Standards Act, 2000 and O. Reg. 285/01, Human Rights Code, Occupational Health and Safety Act, Workplace Safety and Insurance Act, 1997, Pay Equity Act
+- Homes: Residential Tenancies Act, 2006 and O. Reg. 516/06, Condominium Act, 1998
+- Buying, borrowing and services: Consumer Protection Act, 2002 and O. Reg. 17/05 (car rentals, gyms, purchases), Sale of Goods Act, Payday Loans Act, 2008, Collection and Debt Settlement Services Act, Consumer Reporting Act, Repair and Storage Liens Act, Personal Property Security Act, Mortgage Brokerages, Lenders and Administrators Act, 2006, Trust in Real Estate Services Act, 2002, Arthur Wishart Act (Franchise Disclosure), 2000, Insurance Act
+- Any contract: Limitations Act, 2002, Electronic Commerce Act, 2000, Personal Health Information Protection Act, 2004
+
+Each law has a `jurisdiction` (`federal` or `ontario`), shown to the model with every candidate section, and Ontario sections are embedded with "(Ontario)" after the title, so a query that names the province finds them first. To load or refresh them (a few minutes):
 
 ```powershell
-uv run python -m backend.ontario_laws            # ESA and RTA
-uv run python -m backend.ontario_laws 00e41      # or just some, by e-Laws name
+uv run python -m backend.ontario_laws                     # everything in LAWS
+uv run python -m backend.ontario_laws 00e41               # or a statute, by e-Laws name
+uv run python -m backend.ontario_laws regulation/050017   # or a regulation
 ```
 
-**Links to the exact section.** Every citation's `url` points at the section itself: Justice Laws has a page per section (`/eng/acts/L-2/section-184.html`), and e-Laws sections link to their anchor on the statute's page (`/laws/statute/00e41#BK68`), stored in `law_sections.anchor`.
+**Links to the exact section.** Every citation's `url` points at the section itself: Justice Laws has a page per section (`/eng/acts/L-2/section-184.html`; a grouped label like "31 and 32" links to its first section), and e-Laws sections link to their anchor on the law's page (`/laws/statute/00e41#BK68`), stored in `law_sections.anchor`. Sections without a number (schedules) link to the law's page.
 
 To load a fresh database (hours on CPU, downloads about 340 MB of XML into `backend/data/`, which is gitignored):
 
@@ -68,7 +85,7 @@ uv run python -m backend.ingest_laws                 # everything; safe to re-ru
 uv run python -m backend.ingest_laws --only C-46     # or just some laws, by file name
 ```
 
-Check the database size first (`select pg_size_pretty(pg_database_size(current_database()))`). Past 500 MB, Supabase's free tier makes the database read-only.
+Past 500 MB, Supabase's free tier makes the database read-only, which would break uploads for everyone. Both loaders stop before the next law once the database reaches 460 MiB (`MAX_LAW_LOAD_MB` in `database.py`; change it with `--max-mb`), leaving room for documents and index growth. The database is at that cap now, so loading more law means raising the limit on Supabase or removing some first. Check the size with `select pg_size_pretty(pg_database_size(current_database()))`.
 
 Try a query from the terminal, or call `search_laws(db, text, limit)` in `backend/src/backend/laws.py` from the API:
 
