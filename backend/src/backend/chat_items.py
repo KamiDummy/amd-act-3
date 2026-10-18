@@ -22,12 +22,24 @@ MAX_NAME_CHARS = 120
 MAX_NOTE_CHARS = 2000
 MAX_QUOTE_CHARS = 400
 
+# What the model calls each kind of item. Every item is a highlight: calling the user's
+# unscanned ones "notes" made the model read "make it a highlight" as turning one of
+# them into a highlight. "risk" and "highlight" are older clients' kinds.
+ITEM_TYPES = {
+    "auto": "auto-scan finding",
+    "scan": "scanned highlight",
+    "note": "highlight",
+    "risk": "scanned highlight",
+    "highlight": "highlight",
+}
+
 ITEMS_GUIDE = f"""\
 The user's highlights on this document may follow inside <items> tags, each with a ref \
-("I1", ...), its kind, the user's name for it, their note (may be empty) and the \
-passage it marks. Kinds: "auto" was found by the automatic scan of the document; \
-"scan" is the user's own highlight that was scanned for risks, with its severity; \
-"note" is the user's own highlight that hasn't been scanned.
+("I1", ...), its type, the user's name for it, their note on it (may be empty) and the \
+passage it marks. Every item is already a highlight. Types: "auto-scan finding" was \
+found by the automatic scan of the document; "scanned highlight" is one the user made \
+and had scanned for risks, with its severity; "highlight" is one the user made and \
+hasn't scanned.
 - mentions: the refs of the items the answer is about, for example when the user asks \
 to list or find their highlights or notes, or an item covers what they ask. Empty \
 otherwise.
@@ -38,16 +50,20 @@ exactly from the document, at most {MAX_QUOTE_CHARS} characters", "name": "a sho
 "note": "a note, or empty", "scan": false}}. Keep "scan" false when the user asks to \
 highlight, save or mark a passage; set it to true only when they ask for it to be \
 scanned or checked for risks or law.
-  - To scan one of the user's own highlights (kind "note" or "scan"): {{"type": \
-"scan_item", "item": "I1"}}.
+  - To scan one of the user's own highlights (type "highlight" or "scanned \
+highlight"): {{"type": "scan_item", "item": "I1"}}.
   - To rename an item or change its note: {{"type": "update_item", "item": "I1", \
 "name": "the new name, or null to keep it", "note": "the new note, or null to keep it"}}.
   A scan runs after your answer and its result appears in the user's highlights, so say \
 you started it, but don't state its findings. Say in the answer what you changed.
 
-When the user refers to something as "this", "that" or "the one you mentioned", work \
-out what they mean from the selection, the conversation and the passages earlier \
-answers quoted (listed after those answers). Ask only when it is truly unclear."""
+When the user refers to something as "it", "this", "that" or "the one you mentioned", \
+they almost always mean what the latest messages were about: the passage attached to \
+their latest message, or the passages the latest answers quoted (listed after those \
+answers). Refer to one of their items only when they name it or the conversation was \
+about it. Asking to highlight, mark or save "it" means a new highlight of that passage, \
+never turning an existing item into a highlight: every item already is one. Ask only \
+when it is truly unclear."""
 
 
 class ChatItem(BaseModel):
@@ -124,7 +140,7 @@ class ItemRefs:
         return [
             {
                 "ref": ref,
-                "kind": item.kind,
+                "type": ITEM_TYPES[item.kind],
                 "name": item.name,
                 "note": item.description,
                 "passage": item.quote,
