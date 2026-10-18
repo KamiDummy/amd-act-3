@@ -35,8 +35,9 @@ otherwise.
 only then:
   - To highlight a passage: {{"type": "create_highlight", "quote": "a passage copied \
 exactly from the document, at most {MAX_QUOTE_CHARS} characters", "name": "a short name", \
-"note": "a note, or empty", "scan": false}}. Set "scan" to true when the user wants it \
-scanned for risks and related law, not just saved.
+"note": "a note, or empty", "scan": false}}. Keep "scan" false when the user asks to \
+highlight, save or mark a passage; set it to true only when they ask for it to be \
+scanned or checked for risks or law.
   - To scan one of the user's own highlights (kind "note" or "scan"): {{"type": \
 "scan_item", "item": "I1"}}.
   - To rename an item or change its note: {{"type": "update_item", "item": "I1", \
