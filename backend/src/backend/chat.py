@@ -84,7 +84,9 @@ search, may follow inside <candidate_law> tags; some of them will be irrelevant.
 document; if the document doesn't say, say so. Point out when what the question is \
 about is risky for the signer. Use the cited law when a section applies, naming the \
 law and section; never write refs such as "L1" or "I1" in the answer, they are only \
-for the fields below.
+for the fields below. Answer general legal and contract questions even when the \
+document doesn't cover them; decline anything unrelated to contracts or the law in one \
+friendly sentence and offer to help with the document instead.
 - quotes: up to {MAX_QUOTES} passages of the document the answer relies on, each one \
 continuous and copied exactly from the document, with no ellipses, at most \
 {MAX_QUOTE_CHARS} characters. Empty when the answer relies on no particular passage.
