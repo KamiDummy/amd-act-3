@@ -9,18 +9,24 @@ The database stays external (Supabase). Uploaded PDFs live in the `storage` volu
 
 ## Requirements
 
-- A server with 2 GB of RAM or more (the embedding model and PyTorch take about 1 GB) and ports 80 and 443 open. These steps use Ubuntu 24.04.
+- A server with 2 GB of RAM or more (the embedding model and PyTorch take about 1 GB) and ports 80 and 443 open. These steps work on Ubuntu 22.04 and 24.04.
 - A domain with an `A` record pointing at the server. Caddy can't get a certificate until it resolves.
 - The values for `backend/.env`: the database URL, the Token Factory key and an access code.
 
 ## 1. Prepare the server
 
-Log in with an SSH key, then turn off password login:
+Log in with an SSH key, then turn off password login. sshd keeps the first value it reads, so a file that sorts before cloud-init's `50-cloud-init.conf` (which allows passwords) wins:
 
 ```bash
-sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl reload ssh
+cat > /etc/ssh/sshd_config.d/00-hardening.conf <<EOF
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin prohibit-password
+EOF
+sshd -t && systemctl reload ssh
 ```
+
+Check from a second terminal that you can still log in with your key before closing the first.
 
 Allow only SSH and the web:
 
@@ -35,7 +41,7 @@ ufw --force enable
 Install Docker Engine from Docker's repository, as in [Docker's guide for Ubuntu](https://docs.docker.com/engine/install/ubuntu/):
 
 ```bash
-apt-get update && apt-get install -y ca-certificates curl
+apt-get update && apt-get install -y ca-certificates curl git
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
