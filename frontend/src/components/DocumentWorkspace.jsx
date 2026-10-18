@@ -164,7 +164,7 @@ function DocumentWorkspace({ document: doc, onReset }) {
       .filter((item) => !item.hidden)
       .map((item) => ({
         id: item.key,
-        kind: item.isRisk ? 'risk' : 'highlight',
+        kind: item.kind,
         name: item.name,
         description: item.note ?? '',
         quote: item.text.slice(0, QUOTE_CHARS_FOR_CHAT),
@@ -173,19 +173,19 @@ function DocumentWorkspace({ document: doc, onReset }) {
       }))
   }
 
-  // Applies what the user asked the chat to change.
+  // Applies what the user asked the chat to change. Scans run like the Scan button's.
   function applyChatActions(answer) {
     for (const action of answer.actions) {
       if (action.type === 'create_highlight' && action.highlight?.length) {
-        const id = highlights.add({
-          text: action.quote,
-          pageNumber: action.page_number,
-          rects: action.highlight,
-        })
+        const passage = { text: action.quote, pageNumber: action.page_number, rects: action.highlight }
+        const id = action.scan ? highlights.addAndCheck(passage) : highlights.add(passage)
         marks.update(highlightKey(id), {
           name: action.name || null,
           description: action.description || null,
         })
+      } else if (action.type === 'scan_item') {
+        const item = byKey.get(action.id)
+        if (item?.source === 'mine') highlights.check(item.id)
       } else if (action.type === 'update_item' && byKey.has(action.id)) {
         const changes = {}
         if (action.name != null) changes.name = action.name || null

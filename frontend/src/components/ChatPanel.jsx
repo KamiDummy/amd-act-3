@@ -52,7 +52,11 @@ function ItemChip({ item, prefix, onShowItem }) {
   )
 }
 
-const ACTION_PREFIX = { create_highlight: 'Created', update_item: 'Updated' }
+function actionPrefix(action) {
+  if (action.type === 'scan_item') return 'Scanning'
+  if (action.type === 'create_highlight') return action.scan ? 'Created · scanning' : 'Created'
+  return 'Updated'
+}
 
 function Answer({ message, items, onShowReference, onSaveReference, savedQuotes, onShowItem }) {
   const [showLaw, setShowLaw] = useState(false)
@@ -63,9 +67,9 @@ function Answer({ message, items, onShowReference, onSaveReference, savedQuotes,
     .map((action) => ({
       action,
       item:
-        action.type === 'update_item'
-          ? byKey.get(action.id)
-          : items.find((i) => i.source === 'mine' && i.text === action.quote),
+        action.type === 'create_highlight'
+          ? items.find((i) => i.source === 'mine' && i.text === action.quote)
+          : byKey.get(action.id),
     }))
     .filter(({ item }) => item)
   const changedKeys = new Set(changed.map(({ item }) => item.key))
@@ -82,7 +86,7 @@ function Answer({ message, items, onShowReference, onSaveReference, savedQuotes,
             <ItemChip
               key={`a${i}`}
               item={item}
-              prefix={ACTION_PREFIX[action.type]}
+              prefix={actionPrefix(action)}
               onShowItem={onShowItem}
             />
           ))}
