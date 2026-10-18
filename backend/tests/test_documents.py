@@ -122,6 +122,18 @@ def test_seed_adds_samples_once(db, client):
     assert all(document["is_sample"] for document in listed)
 
 
+def test_seed_restores_missing_sample_files(db, client, storage_dir):
+    seed(db)
+    for path in storage_dir.iterdir():
+        path.unlink()
+
+    assert seed(db) == []
+    for document in client.get("/api/documents").json():
+        response = client.get(f"/api/documents/{document['id']}/file")
+        assert response.status_code == 200
+        assert response.content == (SAMPLES_DIR / document["filename"]).read_bytes()
+
+
 def test_schema_check_fails_on_unmigrated_database():
     engine = create_engine("sqlite://")
 
