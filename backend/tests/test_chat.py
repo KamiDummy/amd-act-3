@@ -269,6 +269,41 @@ def test_without_items_the_prompt_has_none(client, document, searches):
 def test_invalid_item_is_422(client, document):
     use_llm(FakeLlm())
 
-    response = ask(client, document["id"], "ok", items=[{"id": "x", "kind": "note"}])
+    response = ask(client, document["id"], "ok", items=[{"id": "x", "kind": "comment"}])
 
     assert response.status_code == 422
+
+
+KINDS = [
+    {"id": "highlight:n", "kind": "note", "name": "Salary", "description": "Check the math"},
+    {"id": "finding:a", "kind": "auto", "name": "Unpaid overtime", "severity": "high"},
+]
+
+
+def test_scan_actions_and_notes(client, document, searches):
+    quote = passage(document, 1)
+    llm = use_llm(
+        FakeLlm(
+            NO_LAW,
+            {
+                "answer": "Saved and scanning.",
+                "actions": [
+                    {"type": "create_highlight", "quote": quote, "name": "Pay", "note": "Mine", "scan": True},
+                    {"type": "scan_item", "item": "I1"},
+                    {"type": "scan_item", "item": "I2"},  # Found by the auto scan: scanned already.
+                    {"type": "scan_item", "item": "I9"},
+                    {"type": "update_item", "item": "I1", "note": "New note"},
+                ],
+            },
+        )
+    )
+
+    body = ask(client, document["id"], "Save and scan the salary clause", items=KINDS).json()
+
+    created, scanned, updated = body["actions"]
+    assert (created["type"], created["scan"], created["description"]) == ("create_highlight", True, "Mine")
+    assert scanned == {"type": "scan_item", "id": "highlight:n"}
+    assert updated == {"type": "update_item", "id": "highlight:n", "name": None, "description": "New note"}
+    # The model sees the note as "note" and each item's kind.
+    assert '"note": "Check the math"' in llm.prompts[1][1]
+    assert '"kind": "auto"' in llm.prompts[1][1]
