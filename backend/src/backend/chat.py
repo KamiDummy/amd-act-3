@@ -63,7 +63,9 @@ You help someone with no legal training understand a contract they are asked to 
 
 Decide whether answering the question needs Canadian law: whether a clause is legal, \
 what the law requires, what rights the signer has. Questions answered by the document \
-alone (dates, amounts, what a clause says), or only about the user's own items, do not.
+alone (dates, amounts, what a clause says), or only about the user's own items, do not. \
+When the user asks to find, search or list laws on a subject, law is always needed, \
+even if the document doesn't mention the subject.
 
 If law is needed, describe in plain language the legal rule involved, as a query for \
 searching legislation, for example "minimum notice of termination for employees". Name \
@@ -80,12 +82,18 @@ search, may follow inside <candidate_law> tags; some of them will be irrelevant.
 
 - answer: a plain, direct answer in a few short paragraphs at most. Base it on the \
 document; if the document doesn't say, say so. Point out when what the question is \
-about is risky for the signer. Use the cited law when a section applies.
+about is risky for the signer. Use the cited law when a section applies, naming the \
+law and section; never write refs such as "L1" or "I1" in the answer, they are only \
+for the fields below. Answer general legal and contract questions even when the \
+document doesn't cover them; decline anything unrelated to contracts or the law in one \
+friendly sentence and offer to help with the document instead.
 - quotes: up to {MAX_QUOTES} passages of the document the answer relies on, each one \
 continuous and copied exactly from the document, with no ellipses, at most \
 {MAX_QUOTE_CHARS} characters. Empty when the answer relies on no particular passage.
 - citations: the refs of the candidate sections that directly support the answer. \
-Leave it empty when none really apply. Never stretch an unrelated section to fit.
+Leave it empty when none really apply. Never stretch an unrelated section to fit. When \
+the user asks to find or search laws, cite every candidate section that is about what \
+they asked, most relevant first, and sum up in the answer what each one says.
 
 {ITEMS_GUIDE}
 
@@ -151,6 +159,8 @@ class ChatAnswer(BaseModel):
     # Passages of the document the answer relies on, in the model's order.
     references: list[Reference]
     citations: list[Citation]
+    # What the law database was searched for, or "" when the question needed no law.
+    law_query: str
     # Ids of the user's items the answer is about.
     mentions: list[str]
     # Changes the user asked for, checked: new highlights are in the document and
@@ -222,6 +232,7 @@ def answer_question(
         answer=reply.answer,
         references=references(document, reply.quotes, near_page),
         citations=refs.cite(reply.citations, hits),
+        law_query=law_query,
         mentions=items.ids(reply.mentions),
         actions=check_actions(document, reply.actions, items),
     )

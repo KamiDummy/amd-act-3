@@ -15,15 +15,19 @@ SEVERITY_GUIDE = """\
 "high" if it could cost the signer money or rights they would not expect, \
 "medium" if it is unfavourable but common, "low" if it is a minor drafting gap"""
 
+# Says nothing about which statutes are loaded, so loading more law needs no change here:
+# each candidate section carries its jurisdiction, and the rule is the same for any
+# contract.
 LAW_COVERAGE = """\
-The law searched is Canadian federal law plus two Ontario statutes: the Employment \
-Standards Act, 2000 and the Residential Tenancies Act, 2006. Each candidate section \
-names its jurisdiction. Leases, most employment contracts and most consumer contracts \
-are governed by provincial law, not federal law: for an Ontario job or rental, rely on \
-the Ontario sections and never cite a federal section that does not govern the clause. \
-For other provinces, or Ontario rules outside those two statutes, say the provincial \
-law should be checked. Name a rule that isn't among the candidates only when you are \
-confident of it, and present it as something to confirm."""
+The law database holds Canadian federal law and some provincial statutes; each \
+candidate section names its jurisdiction. Cite only sections from the jurisdiction \
+whose law governs the contract. Most contracts between people and businesses (jobs, \
+leases, rentals, purchases, services) are governed by provincial law; federal law \
+governs only some areas, such as banking, airlines, telecommunications, interest rates \
+and criminal matters, so never cite a federal section that does not govern the clause. \
+When the governing province's law is not among the candidates, say that its law should \
+be checked. Name a rule that isn't among the candidates only when you are confident of \
+it, and present it as something to confirm."""
 
 # Laws are embedded with their jurisdiction, so naming the province in a search query
 # brings up that province's statutes over federal ones on the same subject.
