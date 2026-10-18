@@ -94,6 +94,25 @@ The response has `explanation` (what the passage means, then whether it is a pro
 
 Explain and the loophole scan judge clauses by the same criteria and severity scale, kept in `review_criteria.py`, so the same clause gets the same verdict from either. The ref and citation checks are shared in `law_citations.py`.
 
+### Document chat (LLM)
+
+`POST /api/documents/{id}/chat` answers a question about a stored document:
+
+```json
+{
+  "question": "Can they fire me without notice?",
+  "history": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}],
+  "selection": {"text": "<selected text>", "page_number": 2}
+}
+```
+
+`history` is the conversation so far, oldest first. The server keeps no chat state, so the client stores the conversation and sends it with each question; only the last 20 messages are used. `selection` is optional: a passage the user attached to the question. Questions are up to 2,000 characters, history messages up to 8,000.
+
+The response has `answer`, `references` and `citations` (same shape as the loophole scan's). Each reference is a passage of the document the answer relies on, with its `quote`, `page_number` and `highlight`, so the client can link it to its place in the PDF. Quotes that can't be found in the document are dropped. It makes two Token Factory calls and takes 10 to 30 seconds:
+
+1. The model reads the document and the conversation and decides whether the question needs law. If so, it writes a search query.
+2. After the vector search (skipped when no law is needed), the model answers, quoting the document and citing only the sections retrieved for this question.
+
 ### Highlights on the PDF
 
 Every feature that points at a passage in the document returns it as `highlight`, a list of rectangles, one per line of text:
