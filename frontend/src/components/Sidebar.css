@@ -188,27 +188,9 @@
   color: var(--text-muted);
 }
 
-.sb-doc-remove {
-  padding: 0 8px;
-  border-radius: 8px;
-  font-size: 18px;
-  line-height: 1;
-  opacity: 0;
-  color: var(--text-muted);
-}
 
-.sb-doc:hover .sb-doc-remove,
-.sb-doc-remove:focus-visible {
-  opacity: 1;
-}
 
-.sb-doc-remove:hover:not(:disabled) {
-  color: var(--danger);
-}
 
-.is-collapsed .sb-doc-remove {
-  display: none;
-}
 
 .sb-bottom {
   display: flex;

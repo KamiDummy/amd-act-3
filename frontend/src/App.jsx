@@ -10,6 +10,7 @@ import {
 } from './api/auth'
 import { setUnauthorizedHandler } from './api/client'
 import { listDocuments, uploadDocument } from './api/documents'
+import { clearDocumentData } from './utils/documentData'
 import DocumentWorkspace from './components/DocumentWorkspace'
 import Sidebar from './components/Sidebar'
 import './App.css'
@@ -31,6 +32,8 @@ function App() {
   const [documentsAttempt, setDocumentsAttempt] = useState(0)
   // null means "no document open", which shows the upload screen.
   const [selectedId, setSelectedId] = useState(null)
+  // Bumped by a document reset, so the workspace starts again from empty.
+  const [resetCount, setResetCount] = useState(0)
 
   // On page load: is a login needed, and if we have a saved token, does it still work?
   useEffect(() => {
@@ -138,15 +141,10 @@ function App() {
     setSelectedId(newDocument.id) // Open what was just uploaded.
   }
 
-  function handleRemove(id) {
-    const index = documents.findIndex((doc) => doc.id === id)
-    const remaining = documents.filter((doc) => doc.id !== id)
-    setDocuments(remaining)
-    if (id === selectedId) {
-      // Open the neighbour that slid into this spot, or the new last one.
-      const next = remaining[index] ?? remaining.at(-1)
-      setSelectedId(next ? next.id : null)
-    }
+  // Forgets what this device saved about a document and opens it fresh.
+  function handleReset(id) {
+    clearDocumentData(id)
+    setResetCount((n) => n + 1)
   }
 
   if (authStatus === 'checking') {
@@ -183,15 +181,18 @@ function App() {
         onRetry={handleRetryDocuments}
         selectedId={selectedId}
         onSelect={setSelectedId}
-        onRemove={handleRemove}
         onNew={() => setSelectedId(null)}
         onSignOut={authRequired ? handleLogout : null}
       />
 
       <main className={selected ? 'app-main has-document' : 'app-main'}>
         {selected ? (
-          // key: a different document gets a fresh workspace (pages, zoom, scan, selection).
-          <DocumentWorkspace key={selected.id} document={selected} />
+          // key: a different document, or a reset, gets a fresh workspace.
+          <DocumentWorkspace
+            key={`${selected.id}:${resetCount}`}
+            document={selected}
+            onReset={() => handleReset(selected.id)}
+          />
         ) : (
           <div className="upload-screen">
             <FileUpload onUpload={handleUpload} />

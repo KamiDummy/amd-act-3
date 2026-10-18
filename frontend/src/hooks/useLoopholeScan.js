@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { scanLoopholes } from '../api/analysis'
+import { documentKey } from '../utils/documentData'
 import { loadJSON, saveJSON } from '../utils/storage'
 
-const scanKey = (documentId) => `scan:${documentId}`
+const scanKey = (documentId) => documentKey('scan', documentId)
 
 // Scans still running, by document id. Kept outside the component so a scan carries
 // on (and gets saved) if the user opens another document, and the workspace picks it

@@ -42,7 +42,7 @@ function HighlightRects({ pageNumber, items, activeKey, hoverKey, onSelect }) {
         onClick={() => onSelect(item.key)}
       />
     ))
-    // A small ✎ at the end of the passage's first line when the user wrote a note on it.
+    // A small ✎ at the end of the passage's first line when the user described it.
     const first = item.rects[0]
     if (item.hasNote && first?.page_number === pageNumber) {
       shapes.push(

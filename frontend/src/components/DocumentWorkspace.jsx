@@ -1,14 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useChat } from '../hooks/useChat'
-import { useChecks } from '../hooks/useChecks'
+import { useHighlights } from '../hooks/useHighlights'
 import { useLoopholeScan } from '../hooks/useLoopholeScan'
-import { useStoredState } from '../hooks/useStoredState'
-import {
-  DOCUMENT_NOTE,
-  explanationNoteKey,
-  findingNoteKey,
-  highlightNoteKey,
-} from '../utils/notes'
+import { useMarks } from '../hooks/useMarks'
+import { findingKey, highlightKey } from '../utils/itemKeys'
 import { itemAtPoint, readPdfSelection } from '../utils/pdfSelection'
 import { defaultColor } from '../utils/pens'
 import ChatPanel from './ChatPanel'
@@ -22,6 +17,7 @@ import './DocumentWorkspace.css'
 // Rectangles from the backend and from a browser selection differ slightly, so tops this
 // close (a fraction of the page) are taken as the same line.
 const SAME_LINE = 0.008
+const QUOTE_CHARS_FOR_CHAT = 400
 
 // Reading order: by page, then down the page. Passages not found on the page go last.
 function byPosition(a, b) {
@@ -32,6 +28,12 @@ function byPosition(a, b) {
   return ra.x0 - rb.x0
 }
 
+// A highlight's name until the user or the check gives it one: its first words.
+function snippet(text, words = 8) {
+  const all = text.split(/\s+/)
+  return all.length > words ? `${all.slice(0, words).join(' ')}…` : text
+}
+
 function scrollCardIntoView(key) {
   requestAnimationFrame(() => {
     document.getElementById(`item-${key}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
@@ -39,34 +41,31 @@ function scrollCardIntoView(key) {
 }
 
 // The open document: the PDF on the left, the Review and Chat panel on the right.
-// Everything marked on the page (loopholes, checked clauses, the user's highlights) is
-// one list of items, each with a colour, a style and an optional note. An item's key
-// is its note key (utils/notes.js). Give it key={document.id} so each document starts
-// with its own state.
-function DocumentWorkspace({ document: doc }) {
+// Everything marked on the page is one list of items, built here:
+//   { key, source: 'scan' | 'mine', id, text, pageNumber, rects, located,
+//     status: 'done' | 'loading' | 'error', error,
+//     analysis: { title, severity, explanation, recommendation, citations } | null,
+//     isRisk, name, defaultName, description, favorite, hidden, color, style }
+// A risk is an item whose analysis found a problem: from the scan, or a highlight the
+// user had checked. onReset forgets the document's data on this device; give it
+// key={document.id} (plus a reset count) so each document starts with its own state.
+function DocumentWorkspace({ document: doc, onReset }) {
   const [tab, setTab] = useState('review')
   const [filter, setFilter] = useState('all')
+  const [showHidden, setShowHidden] = useState(false)
   // The item open in the list and outlined on the page, and the one under the mouse.
   const [activeKey, setActiveKey] = useState(null)
   const [hoverKey, setHoverKey] = useState(null)
-  // An item whose note editor opens as soon as its card shows (just added from the page).
-  const [editNoteKey, setEditNoteKey] = useState(null)
   const [scrollTarget, setScrollTarget] = useState(null)
   const [selection, setSelection] = useState(null)
-  // A passage a chat answer pointed to, flashed on the page for a moment.
+  // A passage the chat pointed to, flashed on the page for a moment.
   const [flash, setFlash] = useState(null)
   const [attachment, setAttachment] = useState(null)
   const [chatFocus, setChatFocus] = useState(0)
 
   const scan = useLoopholeScan(doc.id)
-  const checks = useChecks(doc.id)
-  const chat = useChat(doc.id)
-  // { [key]: { text, updatedAt } }
-  const [notes, setNotes] = useStoredState(`notes:${doc.id}`, {})
-  // How the user wants each item drawn: { [key]: { color, style, hidden } }
-  const [marks, setMarks] = useStoredState(`marks:${doc.id}`, {})
-  // The user's own highlights: [{ id, text, pageNumber, rects, createdAt }]
-  const [highlights, setHighlights] = useStoredState(`highlights:${doc.id}`, [])
+  const highlights = useHighlights(doc.id)
+  const marks = useMarks(doc.id)
 
   // Hide the selection toolbar when the selection goes away or the page moves.
   useEffect(() => {
@@ -100,79 +99,92 @@ function DocumentWorkspace({ document: doc }) {
   }, [flash])
 
   const findings = scan.result?.findings ?? []
-  const allItems = [
+  const items = [
     ...findings.map((finding) => ({
-      key: findingNoteKey(finding),
-      kind: 'loophole',
-      status: 'done',
-      severity: finding.severity,
-      title: finding.title,
+      key: findingKey(finding),
+      source: 'scan',
       text: finding.quote,
       pageNumber: finding.page_number,
       rects: finding.highlight,
-      explanation: finding.explanation,
-      recommendation: finding.recommendation,
-      citations: finding.citations,
-    })),
-    ...checks.checks.map((check) => ({
-      key: explanationNoteKey(check.id),
-      id: check.id,
-      kind: 'check',
-      status: check.status,
-      error: check.error,
-      severity: check.result?.severity,
-      text: check.text,
-      pageNumber: check.result?.highlight[0]?.page_number ?? check.pageNumber,
-      // Where the backend found it, or where the user selected it while it's checking.
-      rects: check.result?.highlight.length ? check.result.highlight : (check.rects ?? []),
-      explanation: check.result?.explanation,
-      recommendation: check.result?.recommendation,
-      citations: check.result?.citations,
-    })),
-    ...highlights.map((highlight) => ({
-      key: highlightNoteKey(highlight.id),
-      id: highlight.id,
-      kind: 'highlight',
       status: 'done',
+      analysis: {
+        title: finding.title,
+        severity: finding.severity,
+        explanation: finding.explanation,
+        recommendation: finding.recommendation,
+        citations: finding.citations,
+      },
+    })),
+    ...highlights.highlights.map((highlight) => ({
+      key: highlightKey(highlight.id),
+      source: 'mine',
+      id: highlight.id,
       text: highlight.text,
       pageNumber: highlight.pageNumber,
-      rects: highlight.rects,
+      rects: highlight.rects ?? [],
+      status: highlights.checking[highlight.id]?.status ?? 'done',
+      error: highlights.checking[highlight.id]?.error,
+      analysis: highlight.analysis ?? null,
     })),
   ]
-  const items = allItems
-    .filter((item) => !marks[item.key]?.hidden)
-    .map((item) => ({
-      ...item,
-      located: item.rects.length > 0,
-      color: marks[item.key]?.color ?? defaultColor(item),
-      style: marks[item.key]?.style ?? 'fill',
-      note: notes[item.key]?.text ?? null,
-    }))
+    .map((item) => {
+      const mark = marks.marks[item.key] ?? {}
+      const severity = item.analysis?.severity
+      const defaultName = item.analysis?.title || snippet(item.text)
+      return {
+        ...item,
+        located: item.rects.length > 0,
+        isRisk: Boolean(severity) && severity !== 'none',
+        defaultName,
+        name: mark.name || defaultName,
+        description: mark.description ?? null,
+        favorite: Boolean(mark.favorite),
+        hidden: Boolean(mark.hidden),
+        color: mark.color ?? defaultColor({ severity }),
+        style: mark.style ?? 'fill',
+      }
+    })
     .sort(byPosition)
-  const dismissedCount = allItems.length - items.length
+  const byKey = new Map(items.map((item) => [item.key, item]))
 
-  // Saves a note right away; an empty text deletes it.
-  function saveNote(key, text) {
-    setNotes((current) => {
-      const next = { ...current }
-      if (text) next[key] = { text, updatedAt: new Date().toISOString() }
-      else delete next[key]
-      return next
-    })
+  // What the chat knows of the user's items, so it can find, list and change them.
+  function itemsForChat() {
+    return items
+      .filter((item) => !item.hidden)
+      .map((item) => ({
+        id: item.key,
+        kind: item.isRisk ? 'risk' : 'highlight',
+        name: item.name,
+        description: item.description ?? '',
+        quote: item.text.slice(0, QUOTE_CHARS_FOR_CHAT),
+        page_number: item.located ? item.pageNumber : null,
+        severity: item.analysis?.severity ?? null,
+      }))
   }
 
-  function updateMark(key, change) {
-    setMarks((current) => ({ ...current, [key]: { ...current[key], ...change } }))
+  // Applies what the user asked the chat to change.
+  function applyChatActions(answer) {
+    for (const action of answer.actions) {
+      if (action.type === 'create_highlight' && action.highlight?.length) {
+        const id = highlights.add({
+          text: action.quote,
+          pageNumber: action.page_number,
+          rects: action.highlight,
+        })
+        marks.update(highlightKey(id), {
+          name: action.name || null,
+          description: action.description || null,
+        })
+      } else if (action.type === 'update_item' && byKey.has(action.id)) {
+        const changes = {}
+        if (action.name != null) changes.name = action.name || null
+        if (action.description != null) changes.description = action.description || null
+        marks.update(action.id, changes)
+      }
+    }
   }
 
-  function forget(key) {
-    saveNote(key, '')
-    setMarks((current) => {
-      const next = { ...current }
-      delete next[key]
-      return next
-    })
-  }
+  const chat = useChat(doc.id, { getItems: itemsForChat, onAnswer: applyChatActions })
 
   function scrollToRects(rects) {
     const first = rects?.[0]
@@ -186,21 +198,33 @@ function DocumentWorkspace({ document: doc }) {
     }
   }
 
+  function flashRects(rects) {
+    scrollToRects(rects)
+    setFlash((previous) => ({ rects, nonce: (previous?.nonce ?? 0) + 1 }))
+  }
+
   // List → page: open an item and scroll the PDF to it.
   function select(key) {
     setActiveKey(key)
-    setEditNoteKey(null)
-    const item = items.find((x) => x.key === key)
+    const item = byKey.get(key)
     if (item) scrollToRects(item.rects)
   }
 
-  // Page → list: clicking a highlight opens its card.
+  // Page → list: clicking a highlight opens its card, wherever the list was filtered.
   function selectFromPage(key) {
     setActiveKey(key)
-    setEditNoteKey(null)
     setTab('review')
     setFilter('all')
+    if (byKey.get(key)?.hidden) setShowHidden(true)
     scrollCardIntoView(key)
+  }
+
+  // Chat → page: show an item the answer mentioned, without leaving the chat.
+  function showItem(key) {
+    const item = byKey.get(key)
+    if (!item) return
+    setActiveKey(key)
+    flashRects(item.rects)
   }
 
   function clearSelection() {
@@ -217,43 +241,32 @@ function DocumentWorkspace({ document: doc }) {
       const current = readPdfSelection()
       setSelection(current)
       if (current || type !== 'mouseup') return
-      const key = itemAtPoint(clientX, clientY, target, items)
+      const key = itemAtPoint(clientX, clientY, target, pageItems)
       if (key) selectFromPage(key)
     }, 0)
   }
 
   function handlePointerMove(event) {
-    const key = itemAtPoint(event.clientX, event.clientY, event.target, items)
+    const key = itemAtPoint(event.clientX, event.clientY, event.target, pageItems)
     if (key !== hoverKey) setHoverKey(key)
   }
 
-  function addHighlight(color, { withNote = false } = {}) {
-    const { text, pageNumber, rects } = selection
-    const id = crypto.randomUUID()
-    const key = highlightNoteKey(id)
-    setHighlights((current) => [
-      ...current,
-      { id, text, pageNumber, rects, createdAt: new Date().toISOString() },
-    ])
-    updateMark(key, { color })
-    clearSelection()
-    if (withNote) {
-      setTab('review')
-      setFilter('all')
-      setActiveKey(key)
-      setEditNoteKey(key)
-      scrollCardIntoView(key)
-    }
+  function passageOf(current) {
+    return { text: current.text, pageNumber: current.pageNumber, rects: current.rects }
   }
 
-  function handleCheck() {
-    const { text, pageNumber, rects } = selection
-    const key = explanationNoteKey(checks.add(text, pageNumber, rects))
+  function handleHighlight(color) {
+    const id = highlights.add(passageOf(selection))
+    marks.update(highlightKey(id), { color })
+    clearSelection()
+  }
+
+  function handleCheckSelection() {
+    const key = highlightKey(highlights.addAndCheck(passageOf(selection)))
     clearSelection()
     setTab('review')
     setFilter('all')
     setActiveKey(key)
-    setEditNoteKey(null)
     scrollCardIntoView(key)
   }
 
@@ -263,51 +276,46 @@ function DocumentWorkspace({ document: doc }) {
     setChatFocus((n) => n + 1)
   }
 
-  function handleRemove(item) {
-    if (item.kind === 'loophole') {
-      updateMark(item.key, { hidden: true }) // Dismissed; a re-scan finds it again.
-    } else {
-      if (item.kind === 'check') checks.remove(item.id)
-      else setHighlights((current) => current.filter((h) => h.id !== item.id))
-      forget(item.key)
-    }
+  function handleDelete(item) {
+    highlights.remove(item.id)
+    marks.forget(item.key)
     if (activeKey === item.key) setActiveKey(null)
   }
 
-  function restoreDismissed() {
-    setMarks((current) =>
-      Object.fromEntries(
-        Object.entries(current).map(([key, mark]) => [key, { ...mark, hidden: false }]),
-      ),
-    )
+  function saveReference(reference) {
+    highlights.add({
+      text: reference.quote,
+      pageNumber: reference.page_number,
+      rects: reference.highlight,
+    })
   }
 
-  function showReference(reference) {
-    scrollToRects(reference.highlight)
-    setFlash((previous) => ({ rects: reference.highlight, nonce: (previous?.nonce ?? 0) + 1 }))
-  }
-
+  // Hidden items stay off the page unless the list is showing them.
   const pageItems = items
-    .filter((item) => item.located)
+    .filter((item) => item.located && (showHidden || !item.hidden))
     .map((item) => ({
       key: item.key,
       color: item.color,
       style: item.style,
-      title: item.title ?? item.text,
-      hasNote: Boolean(item.note),
+      title: item.name,
+      hasNote: Boolean(item.description),
       rects: item.rects,
     }))
-  if (flash) {
-    pageItems.push({
-      key: `flash:${flash.nonce}`,
-      color: 'blue',
-      style: 'fill',
-      title: 'Passage from the answer',
-      flash: true,
-      rects: flash.rects,
-    })
-  }
+  const drawnItems = flash
+    ? [
+        ...pageItems,
+        {
+          key: `flash:${flash.nonce}`,
+          color: 'blue',
+          style: 'fill',
+          title: 'Passage from the chat',
+          flash: true,
+          rects: flash.rects,
+        },
+      ]
+    : pageItems
 
+  const savedQuotes = new Set(items.filter((item) => item.source === 'mine').map((item) => item.text))
   const questionCount = chat.messages.filter((m) => m.role === 'user').length
 
   return (
@@ -325,7 +333,7 @@ function DocumentWorkspace({ document: doc }) {
           renderPageOverlay={(pageNumber) => (
             <HighlightRects
               pageNumber={pageNumber}
-              items={pageItems}
+              items={drawnItems}
               activeKey={activeKey}
               hoverKey={hoverKey}
               onSelect={selectFromPage}
@@ -337,7 +345,7 @@ function DocumentWorkspace({ document: doc }) {
       <ReviewPanel
         tab={tab}
         onTabChange={setTab}
-        counts={{ review: items.length || null, chat: questionCount || null }}
+        counts={{ review: items.filter((i) => !i.hidden).length || null, chat: questionCount || null }}
       >
         {tab === 'review' && (
           <ReviewList
@@ -345,30 +353,27 @@ function DocumentWorkspace({ document: doc }) {
             items={items}
             filter={filter}
             onFilterChange={setFilter}
+            showHidden={showHidden}
+            onShowHiddenChange={setShowHidden}
             activeKey={activeKey}
-            editNoteKey={editNoteKey}
             onSelect={select}
-            onSaveNote={(item, text) => {
-              saveNote(item.key, text)
-              setEditNoteKey(null)
-            }}
-            onCancelNote={() => setEditNoteKey(null)}
-            onChangePen={(item, change) => updateMark(item.key, change)}
+            onChange={(item, changes) => marks.update(item.key, changes)}
+            onCheck={(item) => highlights.check(item.id)}
             onAsk={(item) => askAbout(item.text, item.pageNumber ?? 1)}
-            onRemove={handleRemove}
-            onRetry={(item) => checks.retry(item.id)}
-            documentNote={notes[DOCUMENT_NOTE]?.text ?? null}
-            onSaveDocumentNote={(text) => saveNote(DOCUMENT_NOTE, text)}
-            dismissedCount={dismissedCount}
-            onRestoreDismissed={restoreDismissed}
+            onDelete={handleDelete}
+            onReset={onReset}
           />
         )}
         {tab === 'chat' && (
           <ChatPanel
             chat={chat}
+            items={items}
+            savedQuotes={savedQuotes}
             attachment={attachment}
             onClearAttachment={() => setAttachment(null)}
-            onShowReference={showReference}
+            onShowReference={(reference) => flashRects(reference.highlight)}
+            onSaveReference={saveReference}
+            onShowItem={showItem}
             focusSignal={chatFocus}
           />
         )}
@@ -377,9 +382,8 @@ function DocumentWorkspace({ document: doc }) {
       {selection && (
         <SelectionPopover
           selection={selection}
-          onHighlight={(color) => addHighlight(color)}
-          onNote={() => addHighlight('yellow', { withNote: true })}
-          onCheck={handleCheck}
+          onHighlight={handleHighlight}
+          onCheck={handleCheckSelection}
           onAsk={() => {
             askAbout(selection.text, selection.pageNumber)
             clearSelection()
