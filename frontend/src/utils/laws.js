@@ -1,5 +1,5 @@
 // Where a cited law comes from, to put after its title. Federal law needs no label.
-export function jurisdictionLabel(jurisdiction) {
+function jurisdictionLabel(jurisdiction) {
   if (!jurisdiction || jurisdiction === 'federal') return ''
   return ` (${jurisdiction[0].toUpperCase()}${jurisdiction.slice(1)})`
 }

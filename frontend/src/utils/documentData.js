@@ -1,9 +1,7 @@
 import { removeKey } from './storage'
 
-// Everything this device keeps about one document, by storage key. "explanations" and
-// "notes" hold data from earlier versions, which is moved into highlights and marks
-// when the document opens; they are listed so a reset clears them too.
-const KEYS = ['scan', 'highlights', 'marks', 'chat', 'explanations', 'notes']
+// Everything this device keeps about one document, by storage key.
+const KEYS = ['scan', 'highlights', 'marks', 'chat']
 
 export const documentKey = (name, documentId) => `${name}:${documentId}`
 

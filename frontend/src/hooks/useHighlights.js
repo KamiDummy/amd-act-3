@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { explainSelection } from '../api/analysis'
 import { documentKey } from '../utils/documentData'
-import { loadJSON, removeKey, saveJSON } from '../utils/storage'
+import { loadJSON, saveJSON } from '../utils/storage'
 
 // The user's own highlights, saved on this device:
 //   [{ id, text, pageNumber, rects, createdAt, analysis }]
@@ -10,27 +10,7 @@ import { loadJSON, removeKey, saveJSON } from '../utils/storage'
 // A checked highlight is a risk the user found, next to the ones the scan found.
 
 function load(documentId) {
-  const key = documentKey('highlights', documentId)
-  const saved = loadJSON(key) ?? []
-  // Checks from before highlights and checks were merged become checked highlights.
-  const legacyKey = documentKey('explanations', documentId)
-  const legacy = loadJSON(legacyKey)
-  if (!legacy) return saved
-  const known = new Set(saved.map((h) => h.id))
-  const moved = legacy
-    .filter((check) => check.result && !known.has(check.id))
-    .map((check) => ({
-      id: check.id,
-      text: check.text,
-      pageNumber: check.pageNumber,
-      rects: check.result.highlight?.length ? check.result.highlight : (check.rects ?? []),
-      createdAt: check.createdAt,
-      analysis: toAnalysis(check.result),
-    }))
-  const merged = [...saved, ...moved]
-  saveJSON(key, merged)
-  removeKey(legacyKey)
-  return merged
+  return loadJSON(documentKey('highlights', documentId)) ?? []
 }
 
 function toAnalysis(response) {
