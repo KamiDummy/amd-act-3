@@ -10,9 +10,11 @@ import {
 } from './api/auth'
 import { setUnauthorizedHandler } from './api/client'
 import { listDocuments, uploadDocument } from './api/documents'
+import { useStoredState } from './hooks/useStoredState'
 import { clearDocumentData } from './utils/documentData'
 import DocumentWorkspace from './components/DocumentWorkspace'
 import Sidebar from './components/Sidebar'
+import WelcomeDialog from './components/WelcomeDialog'
 import './App.css'
 
 function App() {
@@ -34,6 +36,8 @@ function App() {
   const [selectedId, setSelectedId] = useState(null)
   // Bumped by a document reset, so the workspace starts again from empty.
   const [resetCount, setResetCount] = useState(0)
+  // The welcome dialog shows once per browser, the first time the workspace opens.
+  const [welcomeSeen, setWelcomeSeen] = useStoredState('ui:welcome-seen', false)
 
   // On page load: is a login needed, and if we have a saved token, does it still work?
   useEffect(() => {
@@ -171,6 +175,8 @@ function App() {
   }
 
   const selected = documents.find((doc) => doc.id === selectedId)
+  // After the documents load, so the dialog can offer the demo contracts.
+  const showWelcome = !welcomeSeen && !documentsLoading && !documentsError
 
   return (
     <div className="app">
@@ -199,6 +205,15 @@ function App() {
           </div>
         )}
       </main>
+
+      {showWelcome && (
+        <WelcomeDialog
+          demos={documents.filter((doc) => doc.isSample)}
+          onOpenDemo={setSelectedId}
+          onUpload={() => setSelectedId(null)}
+          onClose={() => setWelcomeSeen(true)}
+        />
+      )}
     </div>
   )
 }

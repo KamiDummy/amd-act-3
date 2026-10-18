@@ -40,25 +40,31 @@ function Sidebar({
   } else if (documents.length === 0) {
     list = <p className="sb-empty">No documents yet.</p>
   } else {
+    // Demo contracts stay on top, so they're the first thing a new visitor sees. Each
+    // group keeps its newest-first order.
+    const ordered = [...documents.filter((d) => d.isSample), ...documents.filter((d) => !d.isSample)]
     list = (
       <ul className="sb-docs">
-        {documents.map((doc) => {
+        {ordered.map((doc) => {
           const selected = doc.id === selectedId
+          const classes = ['sb-doc', selected && 'is-selected', doc.isSample && 'is-demo']
           return (
-            <li key={doc.id} className={selected ? 'sb-doc is-selected' : 'sb-doc'}>
+            <li key={doc.id} className={classes.filter(Boolean).join(' ')}>
               <button
                 type="button"
                 className="sb-doc-main"
                 onClick={() => onSelect(doc.id)}
                 aria-current={selected ? 'true' : undefined}
-                title={doc.name}
+                title={doc.isSample ? `${doc.name} (demo)` : doc.name}
               >
                 <span className="sb-thumb" aria-hidden="true" />
                 <span className="sb-doc-text">
-                  <span className="sb-doc-name">{doc.name}</span>
+                  <span className="sb-doc-title">
+                    <span className="sb-doc-name">{doc.name}</span>
+                    {doc.isSample && <span className="demo-tag">Demo</span>}
+                  </span>
                   <span className="sb-doc-meta">
                     {doc.pageCount} {doc.pageCount === 1 ? 'page' : 'pages'} · {formatSize(doc.size)}
-                    {doc.isSample && ' · Demo'}
                   </span>
                 </span>
               </button>
