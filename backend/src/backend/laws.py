@@ -1,7 +1,9 @@
-"""Parsing, embedding and searching Canadian federal Acts and regulations.
+"""Parsing, embedding and searching Canadian laws.
 
-Source: the Justice Laws consolidated XML (Open Government Licence - Canada),
-https://github.com/justicecanada/laws-lois-xml
+Federal Acts and regulations come from the Justice Laws consolidated XML (Open
+Government Licence - Canada), https://github.com/justicecanada/laws-lois-xml, parsed
+here. Ontario statutes come from e-Laws, parsed in ontario_laws.py. Both are stored
+and searched the same way.
 """
 
 import xml.etree.ElementTree as ET
@@ -31,6 +33,8 @@ class ParsedSection:
     heading: str | None
     marginal_note: str | None
     text: str
+    # The section's anchor on the law's page, for sites without a page per section.
+    anchor: str | None = None
 
 
 @dataclass
@@ -40,6 +44,9 @@ class ParsedAct:
     title: str
     long_title: str | None
     sections: list[ParsedSection]
+    jurisdiction: str = "federal"
+    # The law's page. None for federal laws, whose URL follows from kind and id.
+    url: str | None = None
 
 
 @dataclass
@@ -48,11 +55,23 @@ class LawHit:
     law_id: str
     law_title: str
     kind: str
+    jurisdiction: str
     label: str
     marginal_note: str | None
     text: str
+    # A link to the section itself, or to the law when the section can't be linked.
     url: str
     score: float
+
+
+def section_url(law: Law, section: LawSection) -> str:
+    """The section's own page (Justice Laws has one per section), its anchor on the
+    law's page (e-Laws), or the law's page when neither is known."""
+    if section.anchor:
+        return f"{law.url}#{section.anchor}"
+    if law.jurisdiction == "federal" and section.label and law.url.endswith("/index.html"):
+        return law.url.removesuffix("index.html") + f"section-{section.label}.html"
+    return law.url
 
 
 @lru_cache
@@ -161,7 +180,8 @@ def parse_act(path: Path) -> ParsedAct | None:
 
 def embedding_input(act: ParsedAct, section: ParsedSection) -> str:
     """The text that gets embedded: context first, so short sections stay findable."""
-    head = f"{act.title}, s. {section.label}"
+    where = "" if act.jurisdiction == "federal" else f" ({act.jurisdiction.title()})"
+    head = f"{act.title}{where}, s. {section.label}"
     if section.marginal_note:
         head += f" ({section.marginal_note})"
     return f"{head}\n{section.text}"
@@ -179,15 +199,17 @@ def store_act(db: Session, act: ParsedAct) -> int:
         Law(
             id=act.id,
             kind=act.kind,
+            jurisdiction=act.jurisdiction,
             title=act.title,
             long_title=act.long_title,
-            url=f"https://laws-lois.justice.gc.ca/eng/{act.kind}s/{act.id}/index.html",
+            url=act.url or f"https://laws-lois.justice.gc.ca/eng/{act.kind}s/{act.id}/index.html",
             sections=[
                 LawSection(
                     label=s.label,
                     part=s.part,
                     heading=s.heading,
                     marginal_note=s.marginal_note,
+                    anchor=s.anchor,
                     text=s.text,
                     embedding=v,
                 )
@@ -214,10 +236,11 @@ def search_laws(db: Session, query: str, limit: int = 5) -> list[LawHit]:
             law_id=law.id,
             law_title=law.title,
             kind=law.kind,
+            jurisdiction=law.jurisdiction,
             label=sec.label,
             marginal_note=sec.marginal_note,
             text=sec.text,
-            url=law.url,
+            url=section_url(law, sec),
             score=1 - dist,
         )
         for sec, law, dist in rows

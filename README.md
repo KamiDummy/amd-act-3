@@ -51,6 +51,15 @@ Federal Acts and regulations live in the `laws` and `law_sections` tables, one r
 
 The shared Supabase database is already loaded, so you only need `uv run alembic upgrade head`. It holds 895 federal Acts (the other 76 of the 971 files had no section text, mostly repealed Acts, and were skipped) and 1,963 regulations, about 95,500 sections and 410 MB in total. Regulations were loaded in file-name order and **stopped at `SOR-2023-123`**, so the newest regulations (`SOR-2023-123` onward) are missing. The rest wouldn't fit under Supabase's 500 MB free-tier limit.
 
+**Ontario law.** The same tables also hold two Ontario statutes, the Employment Standards Act, 2000 (`ON-00e41`) and the Residential Tenancies Act, 2006 (`ON-06r17`), 786 sections in all, because the demo contracts are an Ontario job and an Ontario lease and neither is governed by federal law. They come from [e-Laws](https://www.ontario.ca/laws), whose site reads each statute as HTML from a JSON API; `backend/src/backend/ontario_laws.py` parses it. Each law has a `jurisdiction` (`federal` or `ontario`), shown to the model with every candidate section, and Ontario sections are embedded with "(Ontario)" after the title, so a query that names the province finds them first. To load or refresh them (about a minute):
+
+```powershell
+uv run python -m backend.ontario_laws            # ESA and RTA
+uv run python -m backend.ontario_laws 00e41      # or just some, by e-Laws name
+```
+
+**Links to the exact section.** Every citation's `url` points at the section itself: Justice Laws has a page per section (`/eng/acts/L-2/section-184.html`), and e-Laws sections link to their anchor on the statute's page (`/laws/statute/00e41#BK68`), stored in `law_sections.anchor`.
+
 To load a fresh database (hours on CPU, downloads about 340 MB of XML into `backend/data/`, which is gitignored):
 
 ```powershell
@@ -71,7 +80,7 @@ The first search downloads the embedding model (about 130 MB). Use the same mode
 
 ### Loophole scan (LLM)
 
-`POST /api/documents/{id}/loopholes` scans a stored document and returns findings, most severe first. Each finding has a title, a severity (`high`, `medium` or `low`), the clause quoted from the document, the page it was found on (`null` if the model paraphrased), a plain-language explanation and recommendation, and citations to federal law sections, each with its text and a link. The frontend sends only the document id; the backend reads the stored text.
+`POST /api/documents/{id}/loopholes` scans a stored document and returns findings, most severe first. Each finding has a title, a severity (`high`, `medium` or `low`), the clause quoted from the document, the page it was found on (`null` if the model paraphrased), a plain-language explanation and recommendation, and citations to law sections (federal or Ontario), each with its text and a link to the section. The frontend sends only the document id; the backend reads the stored text.
 
 A scan makes two calls to AMD Token Factory (`Gemma-4-31B-IT`), with a vector search in between, and takes about a minute:
 
@@ -81,11 +90,11 @@ A scan makes two calls to AMD Token Factory (`Gemma-4-31B-IT`), with a vector se
 
 Set `TOKEN_FACTORY_API_KEY` in `backend/.env` (see `.env.example`). Without it the endpoint returns 503. LLM failures return 502. The team shares one key and its limit of about 20 requests a minute, so avoid running many scans at once.
 
-Only federal law is searched, so leases and most employment terms come back with few or no citations and a note to check provincial law.
+Federal law and Ontario's employment and tenancy statutes are searched (6 sections per clause). Contracts from other provinces come back with few or no citations and a note to check provincial law.
 
 ### Highlight-to-law (LLM)
 
-`POST /api/documents/{id}/explain` with `{"text": "<selected text>", "page_number": 2}` checks a passage the user selected for risks and cites federal law for it. `page_number` is the page the selection starts on; it picks the right match when the text repeats. The selection may span pages and can be up to 4,000 characters.
+`POST /api/documents/{id}/explain` with `{"text": "<selected text>", "page_number": 2}` checks a passage the user selected for risks and cites the law for it. `page_number` is the page the selection starts on; it picks the right match when the text repeats. The selection may span pages and can be up to 4,000 characters.
 
 The response has `explanation` (what the passage means, then whether it is a problem and why), `severity` (`high`, `medium`, `low` or `none`), `recommendation` (empty when the passage is fine), `citations` (same shape as the loophole scan's) and the selection's `highlight`. It makes two Token Factory calls and takes 10 to 30 seconds:
 

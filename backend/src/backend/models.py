@@ -46,15 +46,20 @@ EMBEDDING_DIM = 384
 
 
 class Law(Base):
-    """A federal Act or regulation, from the Justice Laws consolidated XML."""
+    """An Act or regulation: federal ones from the Justice Laws consolidated XML,
+    Ontario ones from e-Laws."""
 
     __tablename__ = "laws"
 
-    # The Justice Laws file name, e.g. "C-46" (Criminal Code) or "SOR-2000-111".
+    # Federal: the Justice Laws file name, e.g. "C-46" (Criminal Code) or "SOR-2000-111".
+    # Ontario: "ON-" and the e-Laws name, e.g. "ON-00e41".
     id: Mapped[str] = mapped_column(primary_key=True)
     kind: Mapped[str]  # "act" or "regulation"
+    # "federal" or a province, e.g. "ontario".
+    jurisdiction: Mapped[str] = mapped_column(default="federal", server_default="federal")
     title: Mapped[str]
     long_title: Mapped[str | None] = mapped_column(Text)
+    # The law's page on its government site.
     url: Mapped[str]
 
     sections: Mapped[list[LawSection]] = relationship(
@@ -77,6 +82,9 @@ class LawSection(Base):
     part: Mapped[int] = mapped_column(default=0)
     heading: Mapped[str | None]
     marginal_note: Mapped[str | None]
+    # The section's anchor on the law's page, where the site has no page per section
+    # (e-Laws, e.g. "BK68"). Federal sections have their own pages, so this is empty.
+    anchor: Mapped[str | None]
     text: Mapped[str] = mapped_column(Text)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIM))
 
