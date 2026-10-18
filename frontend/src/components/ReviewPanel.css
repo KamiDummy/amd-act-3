@@ -44,30 +44,22 @@
   color: var(--text-muted);
 }
 
-/* ---------- Loophole scan bar ---------- */
+/* ---------- Auto scan ---------- */
 
-.rv-scan {
-  flex: none;
+.rv-scan-status {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--border);
-}
-
-.rv-scan-text {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-h);
 }
 
-.rv-scan-start {
-  width: 100%;
+p.rv-scan-status {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px 12px;
 }
 
 .rv-elapsed {
@@ -109,12 +101,13 @@
   }
 }
 
-/* ---------- Filters ---------- */
+/* ---------- Show toggles ---------- */
 
-.rv-filters {
+.rv-show {
   flex: none;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
@@ -149,6 +142,15 @@
   opacity: 0.7;
 }
 
+.rv-show-label {
+  margin-right: 2px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 /* ---------- List ---------- */
 
 .rv-body {
@@ -161,9 +163,6 @@
   gap: 10px;
 }
 
-.rv-doc-note {
-  padding: 2px 2px 4px;
-}
 
 .rv-empty,
 .rv-dismissed {
@@ -270,8 +269,8 @@
   color: var(--danger);
 }
 
-/* The scan bar's counts read as sentence-case figures, not tags. */
-.rv-scan-text .rv-sev {
+/* The scan's counts read as sentence-case figures, not tags. */
+.rv-scan-status .rv-sev {
   font-size: 13px;
   letter-spacing: 0;
   text-transform: none;
@@ -520,21 +519,33 @@
   min-width: 0;
 }
 
-.rv-star {
+.rv-card-icons {
   flex: none;
+  display: flex;
+  gap: 2px;
   margin: 6px 6px 0 0;
-  width: 30px;
-  height: 30px;
+}
+
+/* Favourite and hide, always at hand on the card's header. */
+.rv-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border-radius: 6px;
   background: transparent;
   color: var(--text-muted);
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1;
 }
 
-.rv-star:hover:not(:disabled) {
+.rv-icon:hover:not(:disabled) {
   background: var(--accent-soft);
+  color: var(--text-h);
+}
+
+.rv-icon.is-on {
   color: var(--text-h);
 }
 
@@ -568,23 +579,6 @@
   outline-offset: 1px;
 }
 
-/* The kind label takes the severity colour for risks. */
-.rv-kind.sev-high {
-  color: var(--high);
-}
-
-.rv-kind.sev-medium {
-  color: var(--med);
-}
-
-.rv-kind.sev-low {
-  color: var(--low);
-}
-
-.rv-kind.sev-none {
-  color: var(--pen-green);
-}
-
 .rv-card.is-hidden {
   opacity: 0.6;
 }
@@ -605,4 +599,37 @@
   margin-top: 6px;
   padding-top: 10px;
   border-top: 1px solid var(--border);
+}
+
+/* ---------- Sections ---------- */
+
+.rv-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rv-section + .rv-section {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.rv-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.rv-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }

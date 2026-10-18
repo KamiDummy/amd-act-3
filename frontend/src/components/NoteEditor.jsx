@@ -1,18 +1,11 @@
 import { useState } from 'react'
-import './DescriptionEditor.css'
+import './NoteEditor.css'
 
-// The user's description of a marked passage: what it means to them, what to ask.
+// The user's own note on a highlight: what it means to them, what to ask or negotiate.
 // note: the saved text, or null. onSave(text): an empty text deletes it.
+// startEditing opens the editor right away, for a note just started from the page;
 // onCancel is called when the user closes the editor without saving.
-function DescriptionEditor({
-  note,
-  onSave,
-  onCancel,
-  startEditing = false,
-  addLabel = '+ Add a description',
-  label = 'Description',
-  placeholder,
-}) {
+function NoteEditor({ note, onSave, onCancel, startEditing = false }) {
   const [editing, setEditing] = useState(startEditing)
   const [draft, setDraft] = useState(note ?? '')
 
@@ -46,14 +39,14 @@ function DescriptionEditor({
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={placeholder ?? 'What this means for you, what to ask or negotiate…'}
-          aria-label={label}
+          placeholder="What this means for you, what to ask or negotiate…"
+          aria-label="Note"
           rows={3}
           autoFocus
         />
         <div className="note-actions">
           <button type="button" className="small" onClick={save}>
-            Save
+            Save note
           </button>
           <button type="button" className="note-link" onClick={cancel}>
             Cancel
@@ -67,14 +60,14 @@ function DescriptionEditor({
   if (note) {
     return (
       <div className="note">
-        <span className="note-label">{label}</span>
+        <span className="note-label">Your note</span>
         <p className="note-text">{note}</p>
         <div className="note-actions">
           <button type="button" className="note-link" onClick={edit}>
             Edit
           </button>
           <button type="button" className="note-link" onClick={() => onSave('')}>
-            Delete
+            Delete note
           </button>
         </div>
       </div>
@@ -84,10 +77,10 @@ function DescriptionEditor({
   return (
     <div className="note">
       <button type="button" className="note-link note-add" onClick={edit}>
-        {addLabel}
+        + Add a note
       </button>
     </div>
   )
 }
 
-export default DescriptionEditor
+export default NoteEditor
