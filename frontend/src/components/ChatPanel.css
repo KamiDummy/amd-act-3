@@ -181,15 +181,7 @@
   white-space: nowrap;
 }
 
-.chat-law-toggle {
-  padding-left: 10px;
-}
 
-.chat-law {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 
 /* Three dots while the answer is on its way. */
 .chat-typing {
@@ -375,4 +367,80 @@
   opacity: 1;
   color: var(--pen-green);
   cursor: default;
+}
+
+/* ---------- Law an answer found ---------- */
+
+.chat-laws {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.chat-law-searched {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.chat-law-list {
+  align-self: stretch;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* A section of law as a small card, with a blue rule like a citation in a margin. */
+.chat-law-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--pen-blue);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.chat-law-ref {
+  font: 500 11.5px/1.4 var(--mono);
+  color: var(--text-muted);
+}
+
+.chat-law-note {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.chat-law-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+  white-space: pre-line;
+}
+
+.chat-law-text.is-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.chat-law-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 2px;
+}
+
+.chat-law-actions a {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-h);
 }

@@ -3,9 +3,11 @@ import { useChat } from '../hooks/useChat'
 import { useHighlights } from '../hooks/useHighlights'
 import { useLoopholeScan } from '../hooks/useLoopholeScan'
 import { useMarks } from '../hooks/useMarks'
+import { useStoredState } from '../hooks/useStoredState'
 import { findingKey, highlightKey } from '../utils/itemKeys'
 import { itemAtPoint, readPdfSelection } from '../utils/pdfSelection'
 import { defaultColor } from '../utils/pens'
+import { DEFAULT_SHOW, isShown, itemKind } from '../utils/show'
 import ChatPanel from './ChatPanel'
 import HighlightRects from './HighlightRects'
 import PdfViewer from './PdfViewer'
@@ -42,17 +44,24 @@ function scrollCardIntoView(key) {
 
 // The open document: the PDF on the left, the Review and Chat panel on the right.
 // Everything marked on the page is one list of items, built here:
-//   { key, source: 'scan' | 'mine', id, text, pageNumber, rects, located,
-//     status: 'done' | 'loading' | 'error', error,
+//   { key, source: 'scan' | 'mine', kind: 'auto' | 'scan' | 'note', id, text,
+//     pageNumber, rects, located, status: 'done' | 'loading' | 'error', error,
 //     analysis: { title, severity, explanation, recommendation, citations } | null,
-//     isRisk, name, defaultName, description, favorite, hidden, color, style }
-// A risk is an item whose analysis found a problem: from the scan, or a highlight the
-// user had checked. onReset forgets the document's data on this device; give it
-// key={document.id} (plus a reset count) so each document starts with its own state.
+//     isRisk, name, defaultName, note, favorite, hidden, color, style }
+// Every item is a highlight: found by the automatic scan, or the user's own. The user's
+// are notes until they have one scanned, which adds its analysis; isRisk says whether
+// that found a problem. Any highlight can carry the user's text (note), stored as the
+// mark's "description", its name in the chat API.
+// The Show toggles (utils/show.js) decide which items the list and the page show.
+// onReset forgets the document's data on this device; give it key={document.id} (plus
+// a reset count) so each document starts with its own state.
 function DocumentWorkspace({ document: doc, onReset }) {
   const [tab, setTab] = useState('review')
-  const [filter, setFilter] = useState('all')
-  const [showHidden, setShowHidden] = useState(false)
+  // Remembered on this device across documents.
+  const [storedShow, setShow] = useStoredState('ui:show', DEFAULT_SHOW)
+  const show = { ...DEFAULT_SHOW, ...storedShow }
+  // An item whose note editor opens as soon as its card shows (a note started from the page).
+  const [editNoteKey, setEditNoteKey] = useState(null)
   // The item open in the list and outlined on the page, and the one under the mouse.
   const [activeKey, setActiveKey] = useState(null)
   const [hoverKey, setHoverKey] = useState(null)
@@ -131,13 +140,15 @@ function DocumentWorkspace({ document: doc, onReset }) {
       const mark = marks.marks[item.key] ?? {}
       const severity = item.analysis?.severity
       const defaultName = item.analysis?.title || snippet(item.text)
+      const note = mark.description ?? null
       return {
         ...item,
+        kind: itemKind(item),
         located: item.rects.length > 0,
         isRisk: Boolean(severity) && severity !== 'none',
         defaultName,
         name: mark.name || defaultName,
-        description: mark.description ?? null,
+        note,
         favorite: Boolean(mark.favorite),
         hidden: Boolean(mark.hidden),
         color: mark.color ?? defaultColor({ severity }),
@@ -153,28 +164,28 @@ function DocumentWorkspace({ document: doc, onReset }) {
       .filter((item) => !item.hidden)
       .map((item) => ({
         id: item.key,
-        kind: item.isRisk ? 'risk' : 'highlight',
+        kind: item.kind,
         name: item.name,
-        description: item.description ?? '',
+        description: item.note ?? '',
         quote: item.text.slice(0, QUOTE_CHARS_FOR_CHAT),
         page_number: item.located ? item.pageNumber : null,
         severity: item.analysis?.severity ?? null,
       }))
   }
 
-  // Applies what the user asked the chat to change.
+  // Applies what the user asked the chat to change. Scans run like the Scan button's.
   function applyChatActions(answer) {
     for (const action of answer.actions) {
       if (action.type === 'create_highlight' && action.highlight?.length) {
-        const id = highlights.add({
-          text: action.quote,
-          pageNumber: action.page_number,
-          rects: action.highlight,
-        })
+        const passage = { text: action.quote, pageNumber: action.page_number, rects: action.highlight }
+        const id = action.scan ? highlights.addAndCheck(passage) : highlights.add(passage)
         marks.update(highlightKey(id), {
           name: action.name || null,
           description: action.description || null,
         })
+      } else if (action.type === 'scan_item') {
+        const item = byKey.get(action.id)
+        if (item?.source === 'mine') highlights.check(item.id)
       } else if (action.type === 'update_item' && byKey.has(action.id)) {
         const changes = {}
         if (action.name != null) changes.name = action.name || null
@@ -206,16 +217,26 @@ function DocumentWorkspace({ document: doc, onReset }) {
   // List → page: open an item and scroll the PDF to it.
   function select(key) {
     setActiveKey(key)
+    setEditNoteKey(null)
     const item = byKey.get(key)
     if (item) scrollToRects(item.rects)
   }
 
-  // Page → list: clicking a highlight opens its card, wherever the list was filtered.
+  // Page → list: clicking a highlight opens its card. The page only draws what Show
+  // lets through, so the card is in the list.
   function selectFromPage(key) {
     setActiveKey(key)
+    setEditNoteKey(null)
     setTab('review')
-    setFilter('all')
-    if (byKey.get(key)?.hidden) setShowHidden(true)
+    scrollCardIntoView(key)
+  }
+
+  // Opens a highlight the user just made from the page, turning Show on for it if needed.
+  function openNew(key, { editNote = false } = {}) {
+    setShow({ ...show, scan: true, note: true, favoritesOnly: false })
+    setTab('review')
+    setActiveKey(key)
+    setEditNoteKey(editNote ? key : null)
     scrollCardIntoView(key)
   }
 
@@ -255,19 +276,16 @@ function DocumentWorkspace({ document: doc, onReset }) {
     return { text: current.text, pageNumber: current.pageNumber, rects: current.rects }
   }
 
-  function handleHighlight(color) {
-    const id = highlights.add(passageOf(selection))
-    marks.update(highlightKey(id), { color })
+  function handleNote() {
+    const key = highlightKey(highlights.add(passageOf(selection)))
     clearSelection()
+    openNew(key, { editNote: true })
   }
 
   function handleCheckSelection() {
     const key = highlightKey(highlights.addAndCheck(passageOf(selection)))
     clearSelection()
-    setTab('review')
-    setFilter('all')
-    setActiveKey(key)
-    scrollCardIntoView(key)
+    openNew(key)
   }
 
   function askAbout(text, pageNumber) {
@@ -290,15 +308,16 @@ function DocumentWorkspace({ document: doc, onReset }) {
     })
   }
 
-  // Hidden items stay off the page unless the list is showing them.
-  const pageItems = items
-    .filter((item) => item.located && (showHidden || !item.hidden))
+  // The page draws what the list shows.
+  const shown = items.filter((item) => isShown(item, show))
+  const pageItems = shown
+    .filter((item) => item.located)
     .map((item) => ({
       key: item.key,
       color: item.color,
       style: item.style,
       title: item.name,
-      hasNote: Boolean(item.description),
+      hasNote: Boolean(item.note),
       rects: item.rects,
     }))
   const drawnItems = flash
@@ -345,22 +364,22 @@ function DocumentWorkspace({ document: doc, onReset }) {
       <ReviewPanel
         tab={tab}
         onTabChange={setTab}
-        counts={{ review: items.filter((i) => !i.hidden).length || null, chat: questionCount || null }}
+        counts={{ review: shown.length || null, chat: questionCount || null }}
       >
         {tab === 'review' && (
           <ReviewList
             scan={scan}
             items={items}
-            filter={filter}
-            onFilterChange={setFilter}
-            showHidden={showHidden}
-            onShowHiddenChange={setShowHidden}
+            show={show}
+            onShowChange={setShow}
             activeKey={activeKey}
+            editNoteKey={editNoteKey}
             onSelect={select}
             onChange={(item, changes) => marks.update(item.key, changes)}
             onCheck={(item) => highlights.check(item.id)}
             onAsk={(item) => askAbout(item.text, item.pageNumber ?? 1)}
             onDelete={handleDelete}
+            onNoteDone={() => setEditNoteKey(null)}
             onReset={onReset}
           />
         )}
@@ -382,9 +401,9 @@ function DocumentWorkspace({ document: doc, onReset }) {
       {selection && (
         <SelectionPopover
           selection={selection}
-          onHighlight={handleHighlight}
-          onCheck={handleCheckSelection}
-          onAsk={() => {
+          onScan={handleCheckSelection}
+          onNote={handleNote}
+          onSendToChat={() => {
             askAbout(selection.text, selection.pageNumber)
             clearSelection()
           }}

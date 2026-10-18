@@ -1,12 +1,10 @@
 import { MAX_EXPLAIN_CHARS } from '../api/analysis'
-import { PEN_COLORS } from '../utils/pens'
-import './Pens.css'
 import './SelectionPopover.css'
 
-// A small dark toolbar that floats over the text the user selected in the PDF:
-// highlight it in a colour, check it for risks and related law, or ask about it in chat.
+// A small dark toolbar that floats over the text the user selected in the PDF: scan it
+// for risks and related law, add it as a note (no LLM involved), or send it to chat.
 // selection: { text, x, y, below } in viewport coordinates (from the selection's box).
-function SelectionPopover({ selection, onHighlight, onCheck, onAsk }) {
+function SelectionPopover({ selection, onScan, onNote, onSendToChat }) {
   const tooLong = selection.text.length > MAX_EXPLAIN_CHARS
   const limit = `Select up to ${MAX_EXPLAIN_CHARS.toLocaleString()} characters`
   return (
@@ -18,36 +16,26 @@ function SelectionPopover({ selection, onHighlight, onCheck, onAsk }) {
       // Keep the text selected while clicking the buttons.
       onMouseDown={(event) => event.preventDefault()}
     >
-      <div className="sel-pens" role="group" aria-label="Highlight">
-        {PEN_COLORS.map((pen) => (
-          <button
-            key={pen.id}
-            type="button"
-            className={`sel-pen pen-${pen.id}`}
-            onClick={() => onHighlight(pen.id)}
-            aria-label={`Highlight in ${pen.label.toLowerCase()}`}
-            title={`Highlight in ${pen.label.toLowerCase()}`}
-          />
-        ))}
-      </div>
-      <span className="sel-divider" aria-hidden="true" />
       <button
         type="button"
         className="sel-action"
-        onClick={onCheck}
+        onClick={onScan}
         disabled={tooLong}
-        title={tooLong ? limit : 'Check this clause for risks and related law'}
+        title={tooLong ? limit : 'Scan this passage for risks and related law'}
       >
-        Check
+        Scan
+      </button>
+      <button type="button" className="sel-action" onClick={onNote} title="Highlight it and add a note">
+        Add note
       </button>
       <button
         type="button"
         className="sel-action"
-        onClick={onAsk}
+        onClick={onSendToChat}
         disabled={tooLong}
         title={tooLong ? limit : 'Ask about this in chat'}
       >
-        Ask
+        Send to chat
       </button>
     </div>
   )

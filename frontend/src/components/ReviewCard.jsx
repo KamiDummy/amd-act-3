@@ -1,26 +1,18 @@
 import { useState } from 'react'
 import CitationList from './CitationList'
-import DescriptionEditor from './DescriptionEditor'
+import NoteEditor from './NoteEditor'
 import PenPicker from './PenPicker'
 import './Pens.css'
 
-const RISK_LEVEL = { high: 'High', medium: 'Medium', low: 'Low' }
+const KIND_LABEL = { auto: 'Auto scan', scan: 'Scan', note: 'Note' }
+const RISK_LABEL = { high: 'High risk', medium: 'Medium risk', low: 'Low risk', none: 'Looks fine' }
 
-// The label above an item's name: what it is, and how risky when it was checked.
-function kindLabel(item) {
-  if (item.status === 'loading') return 'Checking…'
-  if (item.status === 'error') return 'Check didn’t finish'
-  if (!item.analysis) return 'Highlight'
-  if (item.analysis.severity === 'none') return 'Checked · Looks fine'
-  return `Risk · ${RISK_LEVEL[item.analysis.severity]}`
-}
-
-// One marked passage in the Review list: a risk (found by the scan, or a highlight the
-// user had checked) or a plain highlight. Click the header to open it; the parent
-// scrolls the PDF to it. See DocumentWorkspace for the item's shape.
-// onChange(changes) saves the user's marks: { name, description, favorite, hidden,
-// color, style }.
-function ReviewCard({ item, active, onSelect, onChange, onCheck, onAsk, onDelete }) {
+// One highlight in the list: found by the automatic scan, scanned at the user's request,
+// or a note (the user's own, no LLM). Scanned ones carry a risk badge. Click the header
+// to open it; the parent scrolls the PDF to it. See DocumentWorkspace for the item's shape.
+// onChange(changes) saves the user's marks: { name, description (the note), favorite,
+// hidden, color, style }. editingNote opens the note editor at once.
+function ReviewCard({ item, active, editingNote, onSelect, onChange, onCheck, onAsk, onDelete, onNoteDone }) {
   const [renaming, setRenaming] = useState(false)
   const [draftName, setDraftName] = useState('')
   const busy = item.status === 'loading'
@@ -65,26 +57,47 @@ function ReviewCard({ item, active, onSelect, onChange, onCheck, onAsk, onDelete
             aria-expanded={active}
           >
             <span className="rv-meta">
-              <span className={`rv-kind${severity ? ` sev-${severity}` : ''}`}>{kindLabel(item)}</span>
+              <span className="rv-kind">{KIND_LABEL[item.kind]}</span>
+              {busy && <span className="rv-sev">Scanning…</span>}
+              {item.status === 'error' && <span className="rv-sev rv-sev-error">Scan didn’t finish</span>}
+              {!busy && severity && <span className={`rv-sev sev-${severity}`}>{RISK_LABEL[severity]}</span>}
               <span className="rv-page">{item.located ? `p. ${item.pageNumber}` : 'not on page'}</span>
-              {item.hidden && <span className="rv-page">hidden</span>}
             </span>
             <span className="rv-title">{item.name}</span>
-            {!active && item.description && (
-              <span className="rv-note-preview rv-clamp">{item.description}</span>
-            )}
+            {!active && item.note && <span className="rv-note-preview rv-clamp">✎ {item.note}</span>}
           </button>
         )}
-        <button
-          type="button"
-          className={item.favorite ? 'rv-star is-on' : 'rv-star'}
-          onClick={() => onChange({ favorite: !item.favorite })}
-          aria-pressed={item.favorite}
-          aria-label={item.favorite ? 'Remove from favourites' : 'Add to favourites'}
-          title={item.favorite ? 'Favourite' : 'Add to favourites'}
-        >
-          {item.favorite ? '★' : '☆'}
-        </button>
+        <div className="rv-card-icons">
+          <button
+            type="button"
+            className={item.favorite ? 'rv-icon is-on rv-star' : 'rv-icon rv-star'}
+            onClick={() => onChange({ favorite: !item.favorite })}
+            aria-pressed={item.favorite}
+            aria-label="Favourite"
+            title={item.favorite ? 'Remove from favourites' : 'Add to favourites'}
+          >
+            {item.favorite ? '★' : '☆'}
+          </button>
+          <button
+            type="button"
+            className={item.hidden ? 'rv-icon is-on' : 'rv-icon'}
+            onClick={() => onChange({ hidden: !item.hidden })}
+            aria-pressed={item.hidden}
+            aria-label="Hidden"
+            title={item.hidden ? 'Show on the page again' : 'Hide from the page and the list'}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path
+                d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+              />
+              <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              {item.hidden && <path d="M3 3l18 18" stroke="currentColor" strokeWidth="1.8" />}
+            </svg>
+          </button>
+        </div>
       </div>
 
       {busy && (
@@ -110,6 +123,16 @@ function ReviewCard({ item, active, onSelect, onChange, onCheck, onAsk, onDelete
         <div className="rv-card-body">
           {item.name !== item.text && <blockquote className="rv-quote">“{item.text}”</blockquote>}
 
+          <NoteEditor
+            note={item.note}
+            onSave={(text) => {
+              onChange({ description: text || null })
+              onNoteDone()
+            }}
+            onCancel={onNoteDone}
+            startEditing={editingNote}
+          />
+
           {item.analysis ? (
             <>
               {item.analysis.explanation && <p>{item.analysis.explanation}</p>}
@@ -123,15 +146,10 @@ function ReviewCard({ item, active, onSelect, onChange, onCheck, onAsk, onDelete
           ) : (
             !busy && (
               <button type="button" className="secondary small rv-check" onClick={() => onCheck(item)}>
-                Check for risks and related law
+                Scan for risks and related law
               </button>
             )
           )}
-
-          <DescriptionEditor
-            note={item.description}
-            onSave={(text) => onChange({ description: text || null })}
-          />
 
           <div className="rv-card-tools">
             <PenPicker color={item.color} style={item.style} onChange={onChange} />
@@ -140,16 +158,13 @@ function ReviewCard({ item, active, onSelect, onChange, onCheck, onAsk, onDelete
                 Rename
               </button>
               <button type="button" className="rv-link" onClick={() => onAsk(item)}>
-                Ask in chat
+                Send to chat
               </button>
               {item.source === 'mine' && item.analysis && !busy && (
                 <button type="button" className="rv-link" onClick={() => onCheck(item)}>
-                  Re-check
+                  Re-scan
                 </button>
               )}
-              <button type="button" className="rv-link" onClick={() => onChange({ hidden: !item.hidden })}>
-                {item.hidden ? 'Unhide' : 'Hide'}
-              </button>
               {item.source === 'mine' && (
                 <button type="button" className="rv-link rv-link-danger" onClick={() => onDelete(item)}>
                   Delete

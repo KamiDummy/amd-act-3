@@ -1,14 +1,68 @@
 import { useEffect, useRef, useState } from 'react'
 import { MAX_QUESTION_CHARS } from '../api/analysis'
-import CitationList from './CitationList'
+import { citationTitle } from '../utils/laws'
 import './ChatPanel.css'
 import './Pens.css'
 
 const SUGGESTIONS = [
   'What are the biggest risks for me?',
+  'Which laws protect me in this contract?',
   'Can they end this contract early?',
   'List my highlights and what they mean',
 ]
+
+// Law cards shown before "Show more".
+const LAWS_SHOWN = 3
+
+// One law section an answer cited: where it's from, its heading, the start of its text
+// (opens to the full section), and a link to it on the government site.
+function LawCard({ citation }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <li className="chat-law-card">
+      <span className="chat-law-ref">{citationTitle(citation)}</span>
+      {citation.marginal_note && <span className="chat-law-note">{citation.marginal_note}</span>}
+      <p className={open ? 'chat-law-text' : 'chat-law-text is-clamped'}>{citation.text}</p>
+      <div className="chat-law-actions">
+        <button type="button" className="rv-link" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+          {open ? 'Show less' : 'Full section'}
+        </button>
+        <a href={citation.url} target="_blank" rel="noopener noreferrer">
+          Read s. {citation.section} ↗
+        </a>
+      </div>
+    </li>
+  )
+}
+
+// The law an answer found: what was searched, and a card per section it cited.
+function LawResults({ citations, lawQuery }) {
+  const [showAll, setShowAll] = useState(false)
+  if (!lawQuery && citations.length === 0) return null
+  const shown = showAll ? citations : citations.slice(0, LAWS_SHOWN)
+  return (
+    <div className="chat-laws">
+      {lawQuery && (
+        <p className="chat-law-searched">
+          Searched the law for “{lawQuery}”
+          {citations.length === 0 && ': nothing in the database applies.'}
+        </p>
+      )}
+      {citations.length > 0 && (
+        <ul className="chat-law-list">
+          {shown.map((citation) => (
+            <LawCard key={`${citation.law_id}:${citation.section}`} citation={citation} />
+          ))}
+        </ul>
+      )}
+      {citations.length > LAWS_SHOWN && (
+        <button type="button" className="rv-link" onClick={() => setShowAll((v) => !v)}>
+          {showAll ? 'Show fewer' : `Show ${citations.length - LAWS_SHOWN} more`}
+        </button>
+      )}
+    </div>
+  )
+}
 
 // **bold** inside a line, as React elements (never as HTML).
 function inline(text) {
@@ -52,20 +106,23 @@ function ItemChip({ item, prefix, onShowItem }) {
   )
 }
 
-const ACTION_PREFIX = { create_highlight: 'Created', update_item: 'Updated' }
+function actionPrefix(action) {
+  if (action.type === 'scan_item') return 'Scanning'
+  if (action.type === 'create_highlight') return action.scan ? 'Created · scanning' : 'Created'
+  return 'Updated'
+}
 
 function Answer({ message, items, onShowReference, onSaveReference, savedQuotes, onShowItem }) {
-  const [showLaw, setShowLaw] = useState(false)
-  const { references = [], citations = [], mentions = [], actions = [] } = message
+  const { references = [], citations = [], mentions = [], actions = [], lawQuery = '' } = message
   const byKey = new Map(items.map((item) => [item.key, item]))
   // The items the answer changed, then the others it is about.
   const changed = actions
     .map((action) => ({
       action,
       item:
-        action.type === 'update_item'
-          ? byKey.get(action.id)
-          : items.find((i) => i.source === 'mine' && i.text === action.quote),
+        action.type === 'create_highlight'
+          ? items.find((i) => i.source === 'mine' && i.text === action.quote)
+          : byKey.get(action.id),
     }))
     .filter(({ item }) => item)
   const changedKeys = new Set(changed.map(({ item }) => item.key))
@@ -82,7 +139,7 @@ function Answer({ message, items, onShowReference, onSaveReference, savedQuotes,
             <ItemChip
               key={`a${i}`}
               item={item}
-              prefix={ACTION_PREFIX[action.type]}
+              prefix={actionPrefix(action)}
               onShowItem={onShowItem}
             />
           ))}
@@ -91,7 +148,7 @@ function Answer({ message, items, onShowReference, onSaveReference, savedQuotes,
           ))}
         </div>
       )}
-      {(references.length > 0 || citations.length > 0) && (
+      {references.length > 0 && (
         <div className="chat-sources">
           {references.map((ref, i) => {
             const saved = savedQuotes.has(ref.quote)
@@ -119,23 +176,9 @@ function Answer({ message, items, onShowReference, onSaveReference, savedQuotes,
               </span>
             )
           })}
-          {citations.length > 0 && (
-            <button
-              type="button"
-              className="chat-ref chat-law-toggle"
-              onClick={() => setShowLaw((v) => !v)}
-              aria-expanded={showLaw}
-            >
-              {citations.length} {citations.length === 1 ? 'law' : 'laws'} {showLaw ? '▴' : '▾'}
-            </button>
-          )}
         </div>
       )}
-      {showLaw && (
-        <div className="chat-law">
-          <CitationList citations={citations} hideEmpty />
-        </div>
-      )}
+      <LawResults citations={citations} lawQuery={lawQuery} />
     </div>
   )
 }
