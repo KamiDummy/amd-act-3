@@ -82,7 +82,11 @@ HEADING_CLASSES = {"partnum", "heading1"}
 
 PARAGRAPH = re.compile(r'<p class="([^"]+)"[^>]*>(.*?)</p>', re.DOTALL)
 ANCHOR = re.compile(r'<a name="(BK\d+)">')
-LABEL = re.compile(r"<b>\s*([^<]+?)\s*</b>")
+# A section's number is its first bold run with text; the anchor is sometimes inside it,
+# as in <b> <a name="BK52"></a>26.</b>.
+BOLD = re.compile(r"<b>(.*?)</b>", re.DOTALL)
+# A plain-text section number at the start of a line, as schedules number their items.
+LEADING_NUMBER = re.compile(r"(\d+(?:\.\d+)*)\.?\s+")
 # Amendment citations ("2017, c. 22, Sched. 1, s. 21.") run to the end of a paragraph.
 CITATION = re.compile(r'<span class="citation">.*', re.DOTALL)
 TAG = re.compile(r"<[^>]+>")
@@ -101,6 +105,15 @@ def _class(attribute: str) -> str:
     """The paragraph's kind: its first class, without the "-e" that regulations add."""
     kind = attribute.split()[0]
     return kind.removesuffix("-e")
+
+
+def _label(inner: str) -> tuple[str, str]:
+    """The section's number ("26", no trailing period) and the rest of its first line."""
+    for match in BOLD.finditer(inner):
+        label = _text(match.group(1)).rstrip(".")
+        if label:
+            return label, inner[: match.start()] + inner[match.end() :]
+    return "", inner
 
 
 def _regulation_number(name: str) -> str:
@@ -139,12 +152,22 @@ def parse_law(path: str, document: dict) -> ParsedAct | None:
         elif cls == "headnote":
             headnotes.append(_text(inner))
         elif cls == "section":
-            finish()
             anchor = ANCHOR.search(inner)
-            label = LABEL.search(inner)
-            first = _text(LABEL.sub("", inner, count=1))
+            label, rest = _label(inner)
+            first = _text(rest)
+            if not label:
+                # A schedule's items are numbered in plain text: "1 The public sector…".
+                number = LEADING_NUMBER.match(first)
+                if number:
+                    label, first = number.group(1), first[number.end() :]
+                elif current is not None:
+                    # Not a new section: the rest of the current one, e.g. after a list.
+                    if first:
+                        current["lines"].append(first)
+                    continue
+            finish()
             current = {
-                "label": label.group(1).strip().rstrip(".") if label else "",
+                "label": label,
                 "anchor": anchor.group(1) if anchor else None,
                 # The first note names the section; later ones, its subsections.
                 "note": headnotes[0] if headnotes else None,

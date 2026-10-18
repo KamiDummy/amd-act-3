@@ -44,6 +44,12 @@ CONTENT = """
 <p class="Ysubsection">(3) A provision that is not yet in force &amp; ignored.</p>
 <p class="headnote">Vacation pay</p>
 <p class="section"><a name="BK72"></a><b>35.2 </b>An employer shall pay vacation pay of at least 4 per cent of the employee&#8217;s wages.</p>
+<p class="headnote">When to pay</p>
+<p class="section"><b> <a name="BK73"></a>36.</b><b> </b>(1) Vacation pay is paid before the vacation starts.</p>
+<p class="paragraph"> (a) in a lump sum; or</p>
+<p class="section">unless the employee agrees otherwise in writing.</p>
+<p class="headnote">Public sector</p>
+<p class="section"><a name="BK90"></a>1 The public sector in Ontario consists of the Crown.</p>
 """
 
 
@@ -64,7 +70,13 @@ def test_parse_statute_reads_sections_notes_and_anchors():
     assert [(s.label, s.anchor, s.marginal_note) for s in act.sections] == [
         ("33", "BK68", "Right to vacation"),
         ("35.2", "BK72", "Vacation pay"),
+        # The anchor inside the bold label, and an empty bold run after it.
+        ("36", "BK73", "When to pay"),
+        # A schedule item numbered in plain text.
+        ("1", "BK90", "Public sector"),
     ]
+    # A "section" paragraph without a number continues the section before it.
+    assert act.sections[2].text.splitlines()[-1] == "unless the employee agrees otherwise in writing."
     vacation = act.sections[0]
     assert vacation.heading == "PART xi VACATION WITH PAY"
     assert vacation.text.splitlines() == [
