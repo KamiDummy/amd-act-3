@@ -133,6 +133,15 @@ Change the size cap with `--max-mb`. To try a search from the terminal:
 uv run python -m backend.search_laws "can my landlord enter without notice"
 ```
 
+## Deployment
+
+`compose.yaml` runs the app on a server with Docker: Caddy serves the frontend over HTTPS and forwards the API to the backend, on one domain. [docs/deployment.md](docs/deployment.md) walks through setting up a fresh Ubuntu server.
+
+```bash
+echo "DOMAIN=your.domain.com" > .env    # and fill in backend/.env
+docker compose up -d --build
+```
+
 ## Development
 
 ```bash
@@ -163,6 +172,7 @@ backend/
     ingest_laws.py       loads federal law
     ontario_laws.py      loads Ontario law
     seed.py              loads the demo contracts
+  Dockerfile
   migrations/            Alembic migrations
   sample_documents/      demo contracts (fictional)
   tests/
@@ -172,6 +182,10 @@ frontend/
     components/          sidebar, PDF viewer, highlights list, chat
     hooks/               scan, highlights and chat state, saved in the browser
     utils/
+  Caddyfile              web server: HTTPS, the app, and the API passed to the backend
+  Dockerfile
 docs/
   api.md                 API reference
+  deployment.md          running it on a server
+compose.yaml             production: backend and web server
 ```
