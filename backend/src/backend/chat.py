@@ -1,4 +1,4 @@
-"""Document chat: answers questions about a stored document, citing it and federal law.
+"""Document chat: answers questions about a stored document, citing it and the law.
 
 1. The LLM reads the document and the conversation and decides whether the question
    needs law. If so, it writes a search query for the legal rule involved.
@@ -29,7 +29,7 @@ from backend.laws import LawHit, search_laws
 from backend.llm import LlmClient, LlmError, get_llm
 from backend.loopholes import document_text
 from backend.models import Document
-from backend.review_criteria import FEDERAL_ONLY
+from backend.review_criteria import LAW_COVERAGE, QUERY_PROVINCE
 
 MAX_QUESTION_CHARS = 2000
 MAX_MESSAGE_CHARS = 8000
@@ -38,7 +38,7 @@ MAX_SELECTION_CHARS = 4000
 MAX_HISTORY = 20
 MAX_QUOTES = 4
 MAX_QUOTE_CHARS = 400
-LAWS_PER_QUESTION = 5
+LAWS_PER_QUESTION = 6
 PLAN_MAX_TOKENS = 256
 ANSWER_MAX_TOKENS = 2048
 
@@ -64,7 +64,7 @@ alone (dates, amounts, what a clause says) do not.
 
 If law is needed, describe in plain language the legal rule involved, as a query for \
 searching legislation, for example "minimum notice of termination for employees". Name \
-the subject, not the parties.
+the subject, not the parties. {QUERY_PROVINCE}
 
 Reply with a JSON object: {{"law_query": "..."}}, or {{"law_query": ""}} if no law is needed."""
 
@@ -72,7 +72,7 @@ ANSWER_SYSTEM = f"""\
 You help someone with no legal training understand a contract they are asked to sign. \
 You are not their lawyer and give information, not legal advice.
 
-{INPUT_FORMAT} Candidate sections of Canadian federal law, found by a similarity \
+{INPUT_FORMAT} Candidate sections of Canadian law, found by a similarity \
 search, may follow inside <candidate_law> tags; some of them will be irrelevant.
 
 - answer: a plain, direct answer in a few short paragraphs at most. Base it on the \
@@ -84,7 +84,7 @@ continuous and copied exactly from the document, with no ellipses, at most \
 - citations: the refs of the candidate sections that directly support the answer. \
 Leave it empty when none really apply. Never stretch an unrelated section to fit.
 
-{FEDERAL_ONLY}
+{LAW_COVERAGE}
 
 Reply with a JSON object of this shape:
 {{"answer": "...", "quotes": ["..."], "citations": ["L1"]}}"""
