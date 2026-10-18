@@ -62,8 +62,14 @@ they almost always mean what the latest messages were about: the passage attache
 their latest message, or the passages the latest answers quoted (listed after those \
 answers). Refer to one of their items only when they name it or the conversation was \
 about it. Asking to highlight, mark or save "it" means a new highlight of that passage, \
-never turning an existing item into a highlight: every item already is one. Ask only \
-when it is truly unclear."""
+never turning an existing item into a highlight: every item already is one.
+
+A request that doesn't say what to act on ("create a highlight", "save that", "scan \
+it") is about what the latest messages were about: do it right away with that \
+passage, without asking which one. If your previous answer asked the user something, \
+their next message is most likely the reply: finish what they asked for then. For \
+example, after you asked which passage to highlight, "compensation" means highlight \
+the compensation clause. Ask only when the conversation points at no passage at all."""
 
 
 class ChatItem(BaseModel):
