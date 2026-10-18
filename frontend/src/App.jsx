@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import LoginPage from './components/LoginPage'
 import FileUpload from './components/FileUpload'
-import DocumentSelector from './components/DocumentSelector'
 import {
   clearToken,
   getStoredToken,
@@ -11,8 +10,8 @@ import {
 } from './api/auth'
 import { setUnauthorizedHandler } from './api/client'
 import { listDocuments, uploadDocument } from './api/documents'
-import Logo from './components/Logo'
 import DocumentWorkspace from './components/DocumentWorkspace'
+import Sidebar from './components/Sidebar'
 import './App.css'
 
 function App() {
@@ -177,40 +176,28 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <Logo as="h1" />
-        {authRequired && (
-          <button type="button" className="secondary" onClick={handleLogout}>
-            Sign out
-          </button>
+      <Sidebar
+        documents={documents}
+        loading={documentsLoading}
+        error={documentsError}
+        onRetry={handleRetryDocuments}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        onRemove={handleRemove}
+        onNew={() => setSelectedId(null)}
+        onSignOut={authRequired ? handleLogout : null}
+      />
+
+      <main className={selected ? 'app-main has-document' : 'app-main'}>
+        {selected ? (
+          // key: a different document gets a fresh workspace (pages, zoom, scan, selection).
+          <DocumentWorkspace key={selected.id} document={selected} />
+        ) : (
+          <div className="upload-screen">
+            <FileUpload onUpload={handleUpload} />
+          </div>
         )}
-      </header>
-
-      <div className="app-body">
-        <aside className="app-sidebar">
-          <DocumentSelector
-            documents={documents}
-            loading={documentsLoading}
-            error={documentsError}
-            onRetry={handleRetryDocuments}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            onRemove={handleRemove}
-            onNew={() => setSelectedId(null)}
-          />
-        </aside>
-
-        <main className={selected ? 'app-main has-viewer' : 'app-main'}>
-          {selected ? (
-            // key: a different document gets a fresh workspace (pages, zoom, scan, selection).
-            <DocumentWorkspace key={selected.id} document={selected} />
-          ) : (
-            <div className="upload-screen">
-              <FileUpload onUpload={handleUpload} />
-            </div>
-          )}
-        </main>
-      </div>
+      </main>
     </div>
   )
 }

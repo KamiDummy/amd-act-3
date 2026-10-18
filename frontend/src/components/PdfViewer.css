@@ -1,41 +1,43 @@
 .pdf-viewer {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-radius: 12px;
-  overflow: hidden;
   background: var(--well);
-  border: 1px solid var(--border);
 }
 
-.pdf-toolbar {
-  flex: none;
+/* Zoom floats over the pages' bottom-right corner, so the pages get the full height. */
+.pdf-zoom {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bar);
-}
-
-.pdf-toolbar-info {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.pdf-zoom {
-  display: flex;
-  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border), var(--shadow);
 }
 
 .pdf-zoom button {
-  min-width: 32px;
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.pdf-zoom button:hover:not(:disabled) {
+  background: var(--accent-soft);
 }
 
 .pdf-zoom-level {
-  min-width: 56px;
+  min-width: 52px;
+  font-size: 12.5px;
   font-variant-numeric: tabular-nums;
 }
 

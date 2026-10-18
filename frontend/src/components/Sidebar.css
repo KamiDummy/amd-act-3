@@ -1,0 +1,266 @@
+.sidebar {
+  width: 260px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 10px;
+  box-sizing: border-box;
+  border-right: 1px solid var(--border);
+  background: var(--bar);
+  min-height: 0;
+  transition: width 0.18s ease;
+}
+
+.sidebar.is-collapsed {
+  width: 60px;
+}
+
+.sb-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 2px 4px 2px 8px;
+  min-height: 32px;
+}
+
+.is-collapsed .sb-top {
+  flex-direction: column;
+  padding: 2px 0;
+}
+
+/* Square, quiet icon buttons: collapse, remove. */
+.sb-icon {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sb-icon:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--text-h);
+}
+
+.sb-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.is-collapsed .sb-new {
+  padding: 8px 0;
+}
+
+.is-collapsed .sb-label {
+  display: none;
+}
+
+.sb-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+.sb-empty,
+.sb-error {
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.sb-error {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--danger);
+}
+
+.sb-error p {
+  margin: 0;
+}
+
+.is-collapsed .sb-empty,
+.is-collapsed .sb-error {
+  display: none;
+}
+
+.sb-docs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sb-doc {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: 8px;
+}
+
+.sb-doc:hover {
+  background: var(--accent-soft);
+}
+
+.sb-doc.is-selected {
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border), 0 1px 3px rgba(40, 35, 25, 0.06);
+}
+
+/* Reset the global button look: list items are plain rows. */
+.sb-doc button,
+.sb-doc button:hover:not(:disabled) {
+  background: transparent;
+  color: inherit;
+  font-weight: normal;
+}
+
+.sb-doc-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.is-collapsed .sb-doc-main {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+/* A tiny sheet of paper with ruled lines. */
+.sb-thumb {
+  flex: none;
+  width: 22px;
+  height: 28px;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 3px, var(--border) 3px 4px) content-box,
+    var(--surface);
+  padding: 6px 4px;
+  box-sizing: border-box;
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.sb-doc.is-selected .sb-thumb {
+  box-shadow: 0 0 0 1.5px var(--text-h);
+}
+
+.sb-doc-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.is-collapsed .sb-doc-text {
+  display: none;
+}
+
+.sb-doc-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-h);
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.sb-doc-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sb-doc-remove {
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0;
+  color: var(--text-muted);
+}
+
+.sb-doc:hover .sb-doc-remove,
+.sb-doc-remove:focus-visible {
+  opacity: 1;
+}
+
+.sb-doc-remove:hover:not(:disabled) {
+  color: var(--danger);
+}
+
+.is-collapsed .sb-doc-remove {
+  display: none;
+}
+
+.sb-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.sb-disclaimer {
+  padding: 0 8px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.sb-signout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: transparent;
+  color: var(--text);
+  font-weight: 500;
+  text-align: left;
+}
+
+.sb-signout:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--text-h);
+}
+
+.is-collapsed .sb-signout {
+  justify-content: center;
+}
+
+/* Phones: the menu is a bar across the top, and collapsing hides the list. */
+@media (max-width: 768px) {
+  .sidebar,
+  .sidebar.is-collapsed {
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 45svh;
+  }
+
+  .is-collapsed .sb-top {
+    flex-direction: row;
+  }
+
+  .is-collapsed .sb-list,
+  .is-collapsed .sb-new,
+  .is-collapsed .sb-bottom {
+    display: none;
+  }
+}

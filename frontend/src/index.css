@@ -28,6 +28,21 @@
   --low: oklch(0.58 0.06 250);
   --low-bg: oklch(0.93 0.025 250);
 
+  /* Highlighter palette: a stroke colour and a fill for each pen. Pages are white
+     paper in both themes, so these don't change in dark mode. */
+  --pen-yellow: oklch(0.66 0.13 85);
+  --pen-yellow-bg: oklch(0.92 0.1 95);
+  --pen-red: var(--high);
+  --pen-red-bg: var(--high-bg);
+  --pen-orange: var(--med);
+  --pen-orange-bg: var(--med-bg);
+  --pen-green: oklch(0.6 0.12 150);
+  --pen-green-bg: oklch(0.92 0.07 150);
+  --pen-blue: var(--cite);
+  --pen-blue-bg: var(--cite-bg);
+  --pen-purple: oklch(0.56 0.14 305);
+  --pen-purple-bg: oklch(0.91 0.06 305);
+
   --sans: 'Instrument Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
   --serif: 'Newsreader', Georgia, serif;
   --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
@@ -113,4 +128,14 @@ button.secondary:hover:not(:disabled) {
 button.small {
   padding: 4px 10px;
   font-size: 13px;
+}
+
+/* For text only screen readers need, like the app name next to the bare logo mark. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

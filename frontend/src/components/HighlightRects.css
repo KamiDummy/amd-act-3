@@ -1,22 +1,21 @@
-/* A highlighter stroke over one line of text. "multiply" tints the words underneath
-   without hiding them, like a real highlighter on paper. */
+/* One line of a highlighted passage. Colours come from a pen-<colour> class (Pens.css).
+   The mouse passes through to the text layer underneath, so marked text can still be
+   selected; clicks are matched to highlights by position instead. */
 .hl-rect {
   position: absolute;
   padding: 0;
   border: 0;
   border-radius: 2px;
-  pointer-events: auto;
-  cursor: pointer;
-  mix-blend-mode: multiply;
-  opacity: 0.55;
+  background: transparent;
+  pointer-events: none;
   transition:
     opacity 0.15s,
-    box-shadow 0.15s;
+    box-shadow 0.15s,
+    background 0.15s;
 }
 
-.hl-rect:hover:not(:disabled),
-.hl-rect.is-active {
-  opacity: 0.85;
+.hl-rect:hover:not(:disabled) {
+  background: transparent;
 }
 
 .hl-rect:focus-visible {
@@ -24,56 +23,64 @@
   outline-offset: 1px;
 }
 
-.hl-rect.sev-high,
-.hl-rect.sev-high:hover:not(:disabled) {
-  background: var(--high-bg);
-  box-shadow: inset 0 -2px 0 var(--high);
+/* Highlighter: "multiply" tints the words without hiding them, like ink on paper. */
+.hl-rect.hl-fill,
+.hl-rect.hl-fill:hover:not(:disabled) {
+  background: var(--pen-bg);
+  box-shadow: inset 0 -2px 0 var(--pen);
+  mix-blend-mode: multiply;
+  opacity: 0.6;
 }
 
-.hl-rect.sev-medium,
-.hl-rect.sev-medium:hover:not(:disabled) {
-  background: var(--med-bg);
-  box-shadow: inset 0 -2px 0 var(--med);
+.hl-rect.hl-underline,
+.hl-rect.hl-underline:hover:not(:disabled) {
+  box-shadow: inset 0 -2.5px 0 var(--pen);
+  opacity: 0.9;
 }
 
-.hl-rect.sev-low,
-.hl-rect.sev-low:hover:not(:disabled) {
-  background: var(--low-bg);
-  box-shadow: inset 0 -2px 0 var(--low);
+.hl-rect.hl-box,
+.hl-rect.hl-box:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1.5px var(--pen);
+  opacity: 0.9;
 }
 
-.hl-rect.is-active.sev-high {
-  box-shadow: inset 0 -2px 0 var(--high), 0 0 0 1.5px var(--high);
+.hl-rect.hl-fill.is-hover,
+.hl-rect.hl-fill.is-active {
+  opacity: 0.9;
 }
 
-.hl-rect.is-active.sev-medium {
-  box-shadow: inset 0 -2px 0 var(--med), 0 0 0 1.5px var(--med);
+.hl-rect.is-active {
+  outline: 1.5px solid var(--pen);
+  outline-offset: 1px;
 }
 
-.hl-rect.is-active.sev-low {
-  box-shadow: inset 0 -2px 0 var(--low), 0 0 0 1.5px var(--low);
+/* A passage a chat answer pointed to: pulses for a moment, then fades. */
+.hl-rect.is-flash {
+  background: var(--pen-bg);
+  box-shadow: 0 0 0 2px var(--pen);
+  mix-blend-mode: multiply;
+  animation: hl-flash 2.4s ease-out forwards;
 }
 
-/* Passages the user asked to have explained: the design's yellow "my highlight". */
-.hl-rect.sev-mine,
-.hl-rect.sev-mine:hover:not(:disabled) {
-  background: var(--mine-bg);
-  box-shadow: inset 0 -2px 0 var(--mine);
+@keyframes hl-flash {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
-.hl-rect.is-active.sev-mine {
-  box-shadow: inset 0 -2px 0 var(--mine), 0 0 0 1.5px var(--mine);
-}
-
-/* Marks a highlight the user wrote a note on, like a sticky tab on the page edge. */
+/* Marks a highlight the user wrote a note on, like a sticky tab at the end of the line. */
 .hl-note-pin {
   position: absolute;
   transform: translate(4px, -60%);
   padding: 1px 5px;
   border-radius: 999px;
-  background: var(--mine-bg);
-  box-shadow: 0 0 0 1px var(--mine), 0 1px 3px rgba(0, 0, 0, 0.15);
-  color: #5c4a12;
+  background: var(--pen-bg);
+  box-shadow: 0 0 0 1px var(--pen), 0 1px 3px rgba(0, 0, 0, 0.15);
+  color: #2a2823;
   font-size: 11px;
   line-height: 1.3;
   pointer-events: none;

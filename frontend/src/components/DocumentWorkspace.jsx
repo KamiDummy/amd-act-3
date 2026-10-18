@@ -1,145 +1,74 @@
-import { useEffect, useRef, useState } from 'react'
-import { explainSelection, scanLoopholes } from '../api/analysis'
-import { DOCUMENT_NOTE, explanationNoteKey, findingNoteKey } from '../utils/notes'
-import { loadJSON, saveJSON } from '../utils/storage'
-import ExplanationsPanel from './ExplanationsPanel'
+import { useEffect, useState } from 'react'
+import { useChat } from '../hooks/useChat'
+import { useChecks } from '../hooks/useChecks'
+import { useLoopholeScan } from '../hooks/useLoopholeScan'
+import { useStoredState } from '../hooks/useStoredState'
+import {
+  DOCUMENT_NOTE,
+  explanationNoteKey,
+  findingNoteKey,
+  highlightNoteKey,
+} from '../utils/notes'
+import { itemAtPoint, readPdfSelection } from '../utils/pdfSelection'
+import { defaultColor } from '../utils/pens'
+import ChatPanel from './ChatPanel'
 import HighlightRects from './HighlightRects'
-import LoopholePanel from './LoopholePanel'
-import NotesPanel from './NotesPanel'
 import PdfViewer from './PdfViewer'
+import ReviewList from './ReviewList'
 import ReviewPanel from './ReviewPanel'
 import SelectionPopover from './SelectionPopover'
 import './DocumentWorkspace.css'
 
-const scanKey = (documentId) => `scan:${documentId}`
-const explanationsKey = (documentId) => `explanations:${documentId}`
-const notesKey = (documentId) => `notes:${documentId}`
+// Rectangles from the backend and from a browser selection differ slightly, so tops this
+// close (a fraction of the page) are taken as the same line.
+const SAME_LINE = 0.008
 
-// Scans still running, by document id. Kept outside the component so a scan carries
-// on (and gets saved) if the user opens another document, and the workspace picks it
-// up again when they come back instead of starting a second, quota-using scan.
-const runningScans = new Map()
-
-function startScan(documentId) {
-  if (!runningScans.has(documentId)) {
-    const promise = scanLoopholes(documentId)
-      .then((report) => {
-        const result = {
-          model: report.model,
-          findings: report.findings,
-          scannedAt: new Date().toISOString(),
-        }
-        saveJSON(scanKey(documentId), result)
-        return result
-      })
-      .finally(() => runningScans.delete(documentId))
-    runningScans.set(documentId, { promise, startedAt: Date.now() })
-  }
-  return runningScans.get(documentId)
+// Reading order: by page, then down the page. Passages not found on the page go last.
+function byPosition(a, b) {
+  const [ra, rb] = [a.rects[0], b.rects[0]]
+  if (!ra || !rb) return (ra ? 0 : 1) - (rb ? 0 : 1)
+  if (ra.page_number !== rb.page_number) return ra.page_number - rb.page_number
+  if (Math.abs(ra.top - rb.top) > SAME_LINE) return ra.top - rb.top
+  return ra.x0 - rb.x0
 }
 
-// Saved explanations hold only finished ones; loading and failed ones live in state.
-function saveExplanation(documentId, item) {
-  const saved = loadJSON(explanationsKey(documentId)) ?? []
-  saveJSON(explanationsKey(documentId), [item, ...saved.filter((x) => x.id !== item.id)])
+function scrollCardIntoView(key) {
+  requestAnimationFrame(() => {
+    document.getElementById(`item-${key}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  })
 }
 
-function forgetExplanation(documentId, id) {
-  const saved = loadJSON(explanationsKey(documentId)) ?? []
-  saveJSON(
-    explanationsKey(documentId),
-    saved.filter((x) => x.id !== id),
-  )
-}
-
-// What the user has selected in the PDF's text layer, if anything worth explaining.
-function readPdfSelection() {
-  const selection = window.getSelection()
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null
-  // A drag that starts between lines anchors on the text layer element itself, not on a word.
-  const asElement = (node) => (node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement)
-  const startNode = asElement(selection.anchorNode)
-  if (!startNode?.closest('.react-pdf__Page__textContent')) return null
-  // Lines in the text layer are separate pieces; join them with single spaces.
-  const text = selection.toString().replace(/\s+/g, ' ').trim()
-  if (text.length < 2) return null
-  // The page the selection starts on, whichever direction it was dragged in.
-  const range = selection.getRangeAt(0)
-  const firstPage = asElement(range.startContainer)?.closest('.pdf-page') ?? startNode.closest('.pdf-page')
-  const pageNumber = Number(firstPage?.dataset.pageNumber)
-  if (!pageNumber) return null
-  // Place the button above the selection, or below it near the top of the window,
-  // and always on screen, even for a selection taller than the window.
-  const box = range.getBoundingClientRect()
-  const below = box.top < 80
-  return {
-    text,
-    pageNumber,
-    x: Math.min(Math.max(box.left + box.width / 2, 140), window.innerWidth - 140),
-    y: below ? Math.min(box.bottom, window.innerHeight - 60) : box.top,
-    below,
-  }
-}
-
-// The open document: title, PDF viewer and the review panel (loopholes, explanations).
-// Give it key={document.id} so each document starts with its own state.
+// The open document: the PDF on the left, the Review and Chat panel on the right.
+// Everything marked on the page (loopholes, checked clauses, the user's highlights) is
+// one list of items, each with a colour, a style and an optional note. An item's key
+// is its note key (utils/notes.js). Give it key={document.id} so each document starts
+// with its own state.
 function DocumentWorkspace({ document: doc }) {
-  const mounted = useRef(true)
-  const [tab, setTab] = useState('loopholes')
-  // What's selected in the panel and on the PDF: 'f:<index>' or 'e:<id>'.
+  const [tab, setTab] = useState('review')
+  const [filter, setFilter] = useState('all')
+  // The item open in the list and outlined on the page, and the one under the mouse.
   const [activeKey, setActiveKey] = useState(null)
+  const [hoverKey, setHoverKey] = useState(null)
+  // An item whose note editor opens as soon as its card shows (just added from the page).
+  const [editNoteKey, setEditNoteKey] = useState(null)
   const [scrollTarget, setScrollTarget] = useState(null)
-
-  // Loophole scan
-  const [result, setResult] = useState(() => loadJSON(scanKey(doc.id)))
-  const [scan, setScan] = useState(() => runningScans.get(doc.id) ?? null)
-  const [scanError, setScanError] = useState(null)
-  const [now, setNow] = useState(() => Date.now())
-
-  // Explanations of selected text, newest first
-  const [explanations, setExplanations] = useState(() =>
-    (loadJSON(explanationsKey(doc.id)) ?? []).map((item) => ({ ...item, status: 'done' })),
-  )
   const [selection, setSelection] = useState(null)
+  // A passage a chat answer pointed to, flashed on the page for a moment.
+  const [flash, setFlash] = useState(null)
+  const [attachment, setAttachment] = useState(null)
+  const [chatFocus, setChatFocus] = useState(0)
 
-  // The user's notes: { [key]: { text, updatedAt } }, see utils/notes.js
-  const [notes, setNotes] = useState(() => loadJSON(notesKey(doc.id)) ?? {})
+  const scan = useLoopholeScan(doc.id)
+  const checks = useChecks(doc.id)
+  const chat = useChat(doc.id)
+  // { [key]: { text, updatedAt } }
+  const [notes, setNotes] = useStoredState(`notes:${doc.id}`, {})
+  // How the user wants each item drawn: { [key]: { color, style, hidden } }
+  const [marks, setMarks] = useStoredState(`marks:${doc.id}`, {})
+  // The user's own highlights: [{ id, text, pageNumber, rects, createdAt }]
+  const [highlights, setHighlights] = useStoredState(`highlights:${doc.id}`, [])
 
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
-  }, [])
-
-  // Wait for the running scan (started here, or before switching documents).
-  useEffect(() => {
-    if (!scan) return
-    scan.promise
-      .then((scanResult) => {
-        if (!mounted.current) return
-        setResult(scanResult)
-        setActiveKey(null)
-      })
-      .catch((err) => {
-        // A 401 is handled by the API client, which shows the login page.
-        if (mounted.current && err.status !== 401) {
-          setScanError({ message: err.message, status: err.status })
-        }
-      })
-      .finally(() => {
-        if (mounted.current) setScan(null)
-      })
-  }, [scan])
-
-  // Tick once a second while scanning, for the elapsed-time counter.
-  useEffect(() => {
-    if (!scan) return
-    const timer = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [scan])
-
-  // Hide the "Explain this" button when the selection goes away or the page moves.
+  // Hide the selection toolbar when the selection goes away or the page moves.
   useEffect(() => {
     if (!selection) return
     function hideIfEmpty() {
@@ -163,25 +92,87 @@ function DocumentWorkspace({ document: doc }) {
     }
   }, [selection])
 
+  // A flashed passage fades out on its own (see HighlightRects.css); then drop it.
+  useEffect(() => {
+    if (!flash) return
+    const timer = setTimeout(() => setFlash(null), 2500)
+    return () => clearTimeout(timer)
+  }, [flash])
+
+  const findings = scan.result?.findings ?? []
+  const allItems = [
+    ...findings.map((finding) => ({
+      key: findingNoteKey(finding),
+      kind: 'loophole',
+      status: 'done',
+      severity: finding.severity,
+      title: finding.title,
+      text: finding.quote,
+      pageNumber: finding.page_number,
+      rects: finding.highlight,
+      explanation: finding.explanation,
+      recommendation: finding.recommendation,
+      citations: finding.citations,
+    })),
+    ...checks.checks.map((check) => ({
+      key: explanationNoteKey(check.id),
+      id: check.id,
+      kind: 'check',
+      status: check.status,
+      error: check.error,
+      severity: check.result?.severity,
+      text: check.text,
+      pageNumber: check.result?.highlight[0]?.page_number ?? check.pageNumber,
+      // Where the backend found it, or where the user selected it while it's checking.
+      rects: check.result?.highlight.length ? check.result.highlight : (check.rects ?? []),
+      explanation: check.result?.explanation,
+      recommendation: check.result?.recommendation,
+      citations: check.result?.citations,
+    })),
+    ...highlights.map((highlight) => ({
+      key: highlightNoteKey(highlight.id),
+      id: highlight.id,
+      kind: 'highlight',
+      status: 'done',
+      text: highlight.text,
+      pageNumber: highlight.pageNumber,
+      rects: highlight.rects,
+    })),
+  ]
+  const items = allItems
+    .filter((item) => !marks[item.key]?.hidden)
+    .map((item) => ({
+      ...item,
+      located: item.rects.length > 0,
+      color: marks[item.key]?.color ?? defaultColor(item),
+      style: marks[item.key]?.style ?? 'fill',
+      note: notes[item.key]?.text ?? null,
+    }))
+    .sort(byPosition)
+  const dismissedCount = allItems.length - items.length
+
   // Saves a note right away; an empty text deletes it.
   function saveNote(key, text) {
     setNotes((current) => {
       const next = { ...current }
       if (text) next[key] = { text, updatedAt: new Date().toISOString() }
       else delete next[key]
-      saveJSON(notesKey(doc.id), next)
       return next
     })
   }
 
-  function handleScan() {
-    setScanError(null)
-    setNow(Date.now())
-    setTab('loopholes')
-    setScan(startScan(doc.id))
+  function updateMark(key, change) {
+    setMarks((current) => ({ ...current, [key]: { ...current[key], ...change } }))
   }
 
-  const findings = result?.findings ?? []
+  function forget(key) {
+    saveNote(key, '')
+    setMarks((current) => {
+      const next = { ...current }
+      delete next[key]
+      return next
+    })
+  }
 
   function scrollToRects(rects) {
     const first = rects?.[0]
@@ -195,223 +186,206 @@ function DocumentWorkspace({ document: doc }) {
     }
   }
 
-  // Panel → PDF: select an item and scroll the page to its first highlighted line.
-  function selectFinding(index) {
-    setActiveKey(index === null ? null : `f:${index}`)
-    if (index !== null) scrollToRects(findings[index].highlight)
+  // List → page: open an item and scroll the PDF to it.
+  function select(key) {
+    setActiveKey(key)
+    setEditNoteKey(null)
+    const item = items.find((x) => x.key === key)
+    if (item) scrollToRects(item.rects)
   }
 
-  function selectExplanation(id) {
-    setActiveKey(id === null ? null : `e:${id}`)
-    const item = explanations.find((x) => x.id === id)
-    if (item?.result) scrollToRects(item.result.highlight)
-  }
-
-  // PDF → panel: clicking a highlight opens its card in the right tab.
+  // Page → list: clicking a highlight opens its card.
   function selectFromPage(key) {
     setActiveKey(key)
-    const [kind, id] = key.split(/:(.*)/)
-    setTab(kind === 'f' ? 'loopholes' : 'explanations')
-    const elementId = kind === 'f' ? `finding-${id}` : `explanation-${id}`
-    requestAnimationFrame(() => {
-      document.getElementById(elementId)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-    })
+    setEditNoteKey(null)
+    setTab('review')
+    setFilter('all')
+    scrollCardIntoView(key)
   }
 
-  // Selecting text in the PDF shows the "Explain this" button above it.
-  function handlePointerUp() {
+  function clearSelection() {
+    window.getSelection()?.removeAllRanges()
+    setSelection(null)
+  }
+
+  // Releasing the mouse either ends a text selection (show the toolbar) or is a click,
+  // which opens the highlight under the pointer, if any.
+  function handlePointerUp(event) {
+    const { clientX, clientY, target, type } = event
     // Wait a tick: the browser finishes updating the selection after mouseup.
-    setTimeout(() => setSelection(readPdfSelection()), 0)
+    setTimeout(() => {
+      const current = readPdfSelection()
+      setSelection(current)
+      if (current || type !== 'mouseup') return
+      const key = itemAtPoint(clientX, clientY, target, items)
+      if (key) selectFromPage(key)
+    }, 0)
   }
 
-  function updateExplanation(id, changes) {
-    setExplanations((items) => items.map((x) => (x.id === id ? { ...x, ...changes } : x)))
+  function handlePointerMove(event) {
+    const key = itemAtPoint(event.clientX, event.clientY, event.target, items)
+    if (key !== hoverKey) setHoverKey(key)
   }
 
-  async function runExplanation(id, text, pageNumber) {
-    try {
-      const response = await explainSelection(doc.id, text, pageNumber)
-      const done = {
-        id,
-        text,
-        pageNumber,
-        createdAt: new Date().toISOString(),
-        result: {
-          model: response.model,
-          severity: response.severity,
-          explanation: response.explanation,
-          citations: response.citations,
-          highlight: response.highlight,
-        },
-      }
-      // Saved even if the user has opened another document meanwhile.
-      saveExplanation(doc.id, done)
-      if (!mounted.current) return
-      updateExplanation(id, { ...done, status: 'done' })
-      // Open it, unless the user has moved on to something else meanwhile.
-      setActiveKey((current) => (current === null || current === `e:${id}` ? `e:${id}` : current))
-      if (response.highlight.length > 0) scrollToRects(response.highlight)
-    } catch (err) {
-      if (mounted.current && err.status !== 401) {
-        updateExplanation(id, { status: 'error', error: { message: err.message, status: err.status } })
-      }
+  function addHighlight(color, { withNote = false } = {}) {
+    const { text, pageNumber, rects } = selection
+    const id = crypto.randomUUID()
+    const key = highlightNoteKey(id)
+    setHighlights((current) => [
+      ...current,
+      { id, text, pageNumber, rects, createdAt: new Date().toISOString() },
+    ])
+    updateMark(key, { color })
+    clearSelection()
+    if (withNote) {
+      setTab('review')
+      setFilter('all')
+      setActiveKey(key)
+      setEditNoteKey(key)
+      scrollCardIntoView(key)
     }
   }
 
-  function handleExplain() {
-    if (!selection) return
-    const { text, pageNumber } = selection
-    const id = crypto.randomUUID()
-    window.getSelection()?.removeAllRanges()
-    setSelection(null)
-    setExplanations((items) => [{ id, text, pageNumber, status: 'loading' }, ...items])
-    setActiveKey(`e:${id}`)
-    setTab('explanations')
-    runExplanation(id, text, pageNumber)
+  function handleCheck() {
+    const { text, pageNumber, rects } = selection
+    const key = explanationNoteKey(checks.add(text, pageNumber, rects))
+    clearSelection()
+    setTab('review')
+    setFilter('all')
+    setActiveKey(key)
+    setEditNoteKey(null)
+    scrollCardIntoView(key)
   }
 
-  function handleRetryExplanation(id) {
-    const item = explanations.find((x) => x.id === id)
-    if (!item) return
-    updateExplanation(id, { status: 'loading', error: null })
-    runExplanation(id, item.text, item.pageNumber)
+  function askAbout(text, pageNumber) {
+    setAttachment({ text, pageNumber })
+    setTab('chat')
+    setChatFocus((n) => n + 1)
   }
 
-  function handleRemoveExplanation(id) {
-    setExplanations((items) => items.filter((x) => x.id !== id))
-    forgetExplanation(doc.id, id)
-    saveNote(explanationNoteKey(id), '') // Its note goes with it.
-    if (activeKey === `e:${id}`) setActiveKey(null)
+  function handleRemove(item) {
+    if (item.kind === 'loophole') {
+      updateMark(item.key, { hidden: true }) // Dismissed; a re-scan finds it again.
+    } else {
+      if (item.kind === 'check') checks.remove(item.id)
+      else setHighlights((current) => current.filter((h) => h.id !== item.id))
+      forget(item.key)
+    }
+    if (activeKey === item.key) setActiveKey(null)
   }
 
-  // Everything to draw on the PDF: loophole findings in their severity colour,
-  // explained passages in yellow.
-  const highlightItems = [
-    ...findings.map((finding, index) => ({
-      id: `f:${index}`,
-      severity: finding.severity,
-      title: finding.title,
-      hasNote: Boolean(notes[findingNoteKey(finding)]),
-      rects: finding.highlight,
-    })),
-    ...explanations
-      .filter((item) => item.status === 'done')
-      .map((item) => ({
-        id: `e:${item.id}`,
-        severity: 'mine',
-        title: 'Your highlight: click to see the explanation',
-        hasNote: Boolean(notes[explanationNoteKey(item.id)]),
-        rects: item.result.highlight,
-      })),
-  ]
+  function restoreDismissed() {
+    setMarks((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([key, mark]) => [key, { ...mark, hidden: false }]),
+      ),
+    )
+  }
 
-  // Every note on a finding or explanation that still exists, for the Notes tab.
-  const noteEntries = [
-    ...findings.flatMap((finding, index) => {
-      const note = notes[findingNoteKey(finding)]
-      if (!note) return []
-      return [{
-        key: findingNoteKey(finding),
-        kind: 'Loophole',
-        label: finding.title,
-        text: note.text,
-        onShow: () => {
-          setTab('loopholes')
-          selectFinding(index)
-        },
-      }]
-    }),
-    ...explanations.flatMap((item) => {
-      const note = notes[explanationNoteKey(item.id)]
-      if (!note) return []
-      return [{
-        key: explanationNoteKey(item.id),
-        kind: 'Explanation',
-        label: `“${item.text}”`,
-        text: note.text,
-        onShow: () => {
-          setTab('explanations')
-          selectExplanation(item.id)
-        },
-      }]
-    }),
-  ]
-  const noteCount = noteEntries.length + (notes[DOCUMENT_NOTE] ? 1 : 0)
+  function showReference(reference) {
+    scrollToRects(reference.highlight)
+    setFlash((previous) => ({ rects: reference.highlight, nonce: (previous?.nonce ?? 0) + 1 }))
+  }
 
-  const activeFinding = activeKey?.startsWith('f:') ? Number(activeKey.slice(2)) : null
-  const activeExplanation = activeKey?.startsWith('e:') ? activeKey.slice(2) : null
+  const pageItems = items
+    .filter((item) => item.located)
+    .map((item) => ({
+      key: item.key,
+      color: item.color,
+      style: item.style,
+      title: item.title ?? item.text,
+      hasNote: Boolean(item.note),
+      rects: item.rects,
+    }))
+  if (flash) {
+    pageItems.push({
+      key: `flash:${flash.nonce}`,
+      color: 'blue',
+      style: 'fill',
+      title: 'Passage from the answer',
+      flash: true,
+      rects: flash.rects,
+    })
+  }
+
+  const questionCount = chat.messages.filter((m) => m.role === 'user').length
 
   return (
     <section className="workspace">
-      <div className="workspace-head">
-        <h2>{doc.name}</h2>
-        <p>
-          {doc.pageCount} {doc.pageCount === 1 ? 'page' : 'pages'}
-          {doc.isSample && ' · Demo contract'}
-          {' · Select any text to have it explained'}
-        </p>
+      <div
+        className={hoverKey ? 'workspace-doc is-over-mark' : 'workspace-doc'}
+        onMouseUp={handlePointerUp}
+        onKeyUp={handlePointerUp}
+        onMouseMove={handlePointerMove}
+        onMouseLeave={() => setHoverKey(null)}
+      >
+        <PdfViewer
+          documentId={doc.id}
+          scrollTarget={scrollTarget}
+          renderPageOverlay={(pageNumber) => (
+            <HighlightRects
+              pageNumber={pageNumber}
+              items={pageItems}
+              activeKey={activeKey}
+              hoverKey={hoverKey}
+              onSelect={selectFromPage}
+            />
+          )}
+        />
       </div>
 
-      <div className="workspace-body">
-        <div className="workspace-doc" onMouseUp={handlePointerUp} onKeyUp={handlePointerUp}>
-          <PdfViewer
-            documentId={doc.id}
-            scrollTarget={scrollTarget}
-            renderPageOverlay={(pageNumber) => (
-              <HighlightRects
-                pageNumber={pageNumber}
-                items={highlightItems}
-                activeId={activeKey}
-                onSelect={selectFromPage}
-              />
-            )}
+      <ReviewPanel
+        tab={tab}
+        onTabChange={setTab}
+        counts={{ review: items.length || null, chat: questionCount || null }}
+      >
+        {tab === 'review' && (
+          <ReviewList
+            scan={scan}
+            items={items}
+            filter={filter}
+            onFilterChange={setFilter}
+            activeKey={activeKey}
+            editNoteKey={editNoteKey}
+            onSelect={select}
+            onSaveNote={(item, text) => {
+              saveNote(item.key, text)
+              setEditNoteKey(null)
+            }}
+            onCancelNote={() => setEditNoteKey(null)}
+            onChangePen={(item, change) => updateMark(item.key, change)}
+            onAsk={(item) => askAbout(item.text, item.pageNumber ?? 1)}
+            onRemove={handleRemove}
+            onRetry={(item) => checks.retry(item.id)}
+            documentNote={notes[DOCUMENT_NOTE]?.text ?? null}
+            onSaveDocumentNote={(text) => saveNote(DOCUMENT_NOTE, text)}
+            dismissedCount={dismissedCount}
+            onRestoreDismissed={restoreDismissed}
           />
-        </div>
+        )}
+        {tab === 'chat' && (
+          <ChatPanel
+            chat={chat}
+            attachment={attachment}
+            onClearAttachment={() => setAttachment(null)}
+            onShowReference={showReference}
+            focusSignal={chatFocus}
+          />
+        )}
+      </ReviewPanel>
 
-        <ReviewPanel
-          tab={tab}
-          onTabChange={setTab}
-          counts={{
-            loopholes: result ? findings.length : null,
-            explanations: explanations.length || null,
-            notes: noteCount || null,
+      {selection && (
+        <SelectionPopover
+          selection={selection}
+          onHighlight={(color) => addHighlight(color)}
+          onNote={() => addHighlight('yellow', { withNote: true })}
+          onCheck={handleCheck}
+          onAsk={() => {
+            askAbout(selection.text, selection.pageNumber)
+            clearSelection()
           }}
-        >
-          {tab === 'loopholes' && (
-            <LoopholePanel
-              scanning={Boolean(scan)}
-              elapsedSeconds={scan ? Math.max(0, Math.floor((now - scan.startedAt) / 1000)) : 0}
-              error={scanError}
-              result={result}
-              activeIndex={activeFinding}
-              onSelect={selectFinding}
-              onScan={handleScan}
-              notes={notes}
-              onSaveNote={saveNote}
-            />
-          )}
-          {tab === 'explanations' && (
-            <ExplanationsPanel
-              items={explanations}
-              activeId={activeExplanation}
-              onSelect={selectExplanation}
-              onRemove={handleRemoveExplanation}
-              onRetry={handleRetryExplanation}
-              notes={notes}
-              onSaveNote={saveNote}
-            />
-          )}
-          {tab === 'notes' && (
-            <NotesPanel
-              documentNote={notes[DOCUMENT_NOTE]?.text ?? null}
-              onSaveDocumentNote={(text) => saveNote(DOCUMENT_NOTE, text)}
-              entries={noteEntries}
-            />
-          )}
-        </ReviewPanel>
-      </div>
-
-      {selection && <SelectionPopover selection={selection} onExplain={handleExplain} />}
+        />
+      )}
     </section>
   )
 }
