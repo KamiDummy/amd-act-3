@@ -284,8 +284,7 @@
 }
 
 
-.rv-empty,
-.rv-dismissed {
+.rv-empty {
   margin: 0;
   padding: 4px 2px;
   font-size: 13px;
@@ -392,11 +391,6 @@
 
 .rv-page {
   font: 500 11px var(--mono);
-  color: var(--text-muted);
-}
-
-.rv-has-note {
-  font-size: 12px;
   color: var(--text-muted);
 }
 

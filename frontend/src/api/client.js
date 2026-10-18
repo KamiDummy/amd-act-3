@@ -1,10 +1,10 @@
 import { clearToken, getStoredToken } from './token'
 
 // The one place the backend address lives. Set VITE_API_URL in frontend/.env to override.
-export const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 // An error from the backend. `message` is safe to show to the user.
-export class ApiError extends Error {
+class ApiError extends Error {
   constructor(message, status, options) {
     super(message, options)
     this.name = 'ApiError'

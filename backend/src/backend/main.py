@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(title="Project API", lifespan=lifespan)
+app = FastAPI(title="NotALawyer API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

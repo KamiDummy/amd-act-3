@@ -1,7 +1,7 @@
 import { apiRequest } from './client'
 
 // Converts the backend's field names to the ones the components use.
-export function toDocument(apiDocument) {
+function toDocument(apiDocument) {
   return {
     id: apiDocument.id,
     name: apiDocument.filename,
